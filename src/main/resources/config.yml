@@ -1,0 +1,35 @@
+settings:
+  shop:
+    purchase-cooldown: 5 # 购买冷却时间(秒)
+    conversion-rate: 0.9 # 物品转换率 (90%)
+    max-transaction: 100000.0 # 单次最大交易额
+    enable-preview-menu: true # 是否启用预览菜单
+
+shop:
+  items:
+    DIAMOND:
+      price: 8192.0
+      max-purchase: 64
+    EMERALD:
+      price: 4096.0
+      max-purchase: 64
+    NETHERITE_INGOT:
+      price: 65536.0
+      max-purchase: 16
+    ENCHANTED_GOLDEN_APPLE:
+      price: 262144.0
+      max-purchase: 8
+
+  conversion-recipes:
+    COAL:
+      output: CHARCOAL
+      amount: 1
+    IRON_INGOT:
+      output: GOLD_INGOT
+      amount: 4
+    DIAMOND:
+      output: EMERALD
+      amount: 1
+    COBBLESTONE:
+      output: STONE
+      amount: 64
