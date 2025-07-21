@@ -7,6 +7,8 @@ import top.MiragEdge.emc.Database.DatabaseManager;
 import top.MiragEdge.emc.Manager.EMCManager;
 import top.MiragEdge.emc.Manager.ShopManager;
 
+import java.util.Objects;
+
 public class EMCShop extends JavaPlugin {
 
     private static EMCShop instance;
@@ -33,8 +35,8 @@ public class EMCShop extends JavaPlugin {
 
         // 注册命令
         MainCommand commandExecutor = new MainCommand(this, emcManager, shopManager);
-        getCommand("emcshop").setExecutor(commandExecutor);
-        getCommand("emcshop").setTabCompleter(commandExecutor);
+        Objects.requireNonNull(getCommand("emcshop")).setExecutor(commandExecutor);
+        Objects.requireNonNull(getCommand("emcshop")).setTabCompleter(commandExecutor);
 
         getLogger().info(getDescription().getName() + " v" + getDescription().getVersion() + " 已启用!");
     }

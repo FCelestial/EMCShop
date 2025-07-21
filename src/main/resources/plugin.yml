@@ -1,11 +1,17 @@
 name: EMCShop
-version: '1.2-SNAPSHOT'
+version: '1.4-SNAPSHOT'
 main: top.MiragEdge.emc.EMCShop
 api-version: '1.21'
 prefix: EMCShop
 authors: [ FwindEmi ]
 description: EMC Shop Plugin for MiragEdge NetWork
 website: miragedge.top
+
+commands:
+  emcshop:
+    description: "EMC商店主命令"
+    usage: /emcshop
+
 permissions:
   emcshop.admin.give:
     description: 允许给予EMC
