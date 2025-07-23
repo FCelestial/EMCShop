@@ -1,5 +1,7 @@
 package top.MiragEdge.emc.Commands;
 
+import top.MiragEdge.emc.EMCShop;
+import top.MiragEdge.emc.Gui.PreviewMenu;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.CommandExecutor;
@@ -9,17 +11,21 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 public class ViewCommand implements CommandExecutor {
 
-    public ViewCommand() {
+    private final PreviewMenu previewMenu;
+
+    public ViewCommand(EMCShop plugin) {
+        this.previewMenu = new PreviewMenu(plugin);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!CommandUtils.isPlayer(sender)) return true;
-        Player player = (Player) sender;
+        if (!CommandUtils.isPlayer(sender)) {
+            sender.sendMessage(Component.text("只有玩家可以使用此命令!", NamedTextColor.RED));
+            return true;
+        }
 
-        // 打开菜单
-        // ShopMenu.openPurchaseMenu(player);
-        player.sendMessage(Component.text("已打开物品预览菜单", NamedTextColor.GREEN));
+        Player player = (Player) sender;
+        previewMenu.openPreviewMenu(player);
         return true;
     }
 }
