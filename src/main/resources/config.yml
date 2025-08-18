@@ -7,7 +7,7 @@
 
 # 重构损耗率，1表示100%
 purchase:
-  reconstruction-loss: 0.028
+  reconstruction-loss: 0.038
 
 # 数据库配置
 database:
@@ -19,8 +19,8 @@ database:
 
   # 连接池
   pool:
-    max-size: 15
-    min-idle: 5
+    max-size: 8
+    min-idle: 2
     connection-timeout: 10000
     idle-timeout: 300000
     max-lifetime: 900000 # 15分钟

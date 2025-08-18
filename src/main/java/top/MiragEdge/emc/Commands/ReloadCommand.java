@@ -23,7 +23,6 @@ public class ReloadCommand implements CommandExecutor {
         if (!CommandUtils.checkPermission(sender, PERMISSION, PERM_MESSAGE))
             return true;
 
-        // 调用主类的重载方法
         plugin.reloadPlugin();
         sender.sendMessage(Component.text("EMCShop 配置已重载!", NamedTextColor.GREEN));
         return true;

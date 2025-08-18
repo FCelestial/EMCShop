@@ -1,24 +1,33 @@
 name: EMCShop
-version: '2.8-SNAPSHOT'
+version: '3.9'
 main: top.MiragEdge.emc.EMCShop
 api-version: '1.21'
 prefix: EMCShop
 authors: [ FwindEmi ]
-description: EMC Shop Plugin for MiragEdge NetWork
+description: EMC Shop Plugin for MirageEdge Network
 website: miragedge.top
+
+depend: [Vault]
+softdepend: [PlaceholderAPI]
 
 commands:
   emcshop:
     description: "EMC商店主命令"
     usage: /emcshop
+    aliases:
+    - emc
+    - es
 
 permissions:
-  emcshop.admin.give:
-    description: 允许给予EMC
-    default: op
   emcshop.admin.reload:
     description: 允许重载插件
     default: op
-  emcshop.user:
-    description: 基础用户权限
+  emcshop.user.convert:
+    description: 用户转换菜单权限
+    default: false
+  emcshop.user.purchase:
+    description: 用户重构菜单权限
+    default: false
+  emcshop.user.view:
+    description: 用户物品预览菜单权限
     default: true

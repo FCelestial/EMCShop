@@ -9,6 +9,9 @@ import org.bukkit.entity.Player;
 
 public class PurchaseCommand implements CommandExecutor {
 
+    private static final String PERMISSION = "emcshop.user.purchase";
+    private static final String PERM_MESSAGE = "§6需要达到3级才可以使用这个功能，可通过签到与每日任务获得经验!";
+
     private final PurchaseMenu purchaseMenu;
 
     public PurchaseCommand(EMCShop plugin) {
@@ -18,6 +21,7 @@ public class PurchaseCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!CommandUtils.isPlayer(sender)) return true;
+        if (!CommandUtils.checkPermission(sender, PERMISSION, PERM_MESSAGE)) return true;
         Player player = (Player) sender;
 
         purchaseMenu.openPurchaseMenu(player);

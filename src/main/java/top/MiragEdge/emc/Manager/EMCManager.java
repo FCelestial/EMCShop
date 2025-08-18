@@ -9,17 +9,14 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
 import java.io.File;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 public class EMCManager {
     private final EMCShop plugin;
     private final DatabaseManager dbManager;
-    private final Map<String, Integer> emcValues = new LinkedHashMap<>();
+    private final Map<String, Double> emcValues = new LinkedHashMap<>();
     private final Map<UUID, PlayerData> playerDataMap = new ConcurrentHashMap<>();
 
     public EMCManager(EMCShop plugin, DatabaseManager dbManager) {
@@ -44,7 +41,7 @@ public class EMCManager {
                 for (String key : baseSection.getKeys(false)) {
                     // 使用大写键名确保一致性
                     String normalizedKey = key.toUpperCase();
-                    int value = baseSection.getInt(key);
+                    double value = baseSection.getDouble(key);
                     emcValues.put(normalizedKey, value);
                 }
             }
@@ -54,20 +51,56 @@ public class EMCManager {
         }
     }
 
-    // 添加获取EMC值映射的方法
-    public Map<String, Integer> getEmcValues() {
+    // 获取EMC值映射的方法
+    public Map<String, Double> getEmcValues() {
         return Collections.unmodifiableMap(emcValues);
     }
 
     // 获取物品EMC值（添加空值检查）
-    public int getItemValue(String itemId) {
+    public double getItemValue(String itemId) {
         if (itemId == null || itemId.isEmpty()) {
             return -1;
         }
-        return emcValues.getOrDefault(itemId.toUpperCase(), -1);
+        return emcValues.getOrDefault(itemId.toUpperCase(), -1.0);
     }
 
-    // 玩家登录时加载数据（添加状态检查）
+    /**
+     * 获取玩家所有解锁物品（包括配置中已删除的）
+     * @param playerId 玩家UUID
+     * @return 解锁物品集合
+     */
+    public Set<String> getPlayerUnlockedItems(UUID playerId) {
+        PlayerData playerData = playerDataMap.get(playerId);
+        return playerData != null ?
+                new HashSet<>(playerData.getUnlockedItems()) : // 返回副本防止外部修改
+                Collections.emptySet();
+    }
+
+    /**
+     * 清理无效解锁记录（配置中不存在的物品）
+     * @param playerId 玩家UUID
+     */
+    public void cleanInvalidUnlocks(UUID playerId) {
+        PlayerData playerData = playerDataMap.get(playerId);
+        if (playerData != null) {
+            // 获取当前有效物品ID
+            Set<String> validItems = emcValues.keySet();
+
+            // 创建副本避免并发修改
+            Set<String> unlockedItems = new HashSet<>(playerData.getUnlockedItems());
+
+            // 移除无效物品
+            unlockedItems.removeIf(itemId -> !validItems.contains(itemId));
+
+            // 更新解锁列表
+            playerData.setUnlockedItems(unlockedItems);
+
+            // 异步保存到数据库
+            dbManager.savePlayerDataAsync(playerData);
+        }
+    }
+
+    // 玩家登录时加载数据
     public void onPlayerLogin(Player player) {
         UUID playerId = player.getUniqueId();
 
@@ -83,6 +116,8 @@ public class EMCManager {
             // 确保玩家仍然在线
             if (player.isOnline()) {
                 playerDataMap.put(playerId, playerData);
+                // 登录时清理无效解锁记录
+                cleanInvalidUnlocks(playerId);
             }
         });
     }

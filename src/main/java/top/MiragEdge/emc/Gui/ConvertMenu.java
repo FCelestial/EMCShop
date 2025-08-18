@@ -1,12 +1,14 @@
 package top.MiragEdge.emc.Gui;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TranslatableComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -16,6 +18,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent.Reason;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
@@ -23,8 +26,8 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
-import top.MiragEdge.emc.EMCShop;
 import top.MiragEdge.emc.Manager.EMCManager;
+import top.MiragEdge.emc.EMCShop;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,13 +35,24 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
-public class TransmutationGUI implements InventoryHolder, Listener {
+public class ConvertMenu implements InventoryHolder, Listener {
+
+    // 定义颜色方案
+    private static final TextColor PRIMARY_COLOR = TextColor.color(255, 170, 0);      // 鲜艳的金色
+    private static final TextColor SECONDARY_COLOR = TextColor.color(85, 170, 255);   // 饱和的蓝色
+    private static final TextColor SUCCESS_COLOR = TextColor.color(85, 255, 85);      // 明亮的绿色
+    private static final TextColor WARNING_COLOR = TextColor.color(255, 170, 0);      // 橙色
+    private static final TextColor ERROR_COLOR = TextColor.color(255, 85, 85);        // 红色
+    private static final TextColor INFO_COLOR = TextColor.color(170, 170, 170);       // 中性灰色
+    private static final TextColor VALUE_COLOR = TextColor.color(255, 255, 85);       // 亮黄色
+    private static final TextColor BUTTON_COLOR = TextColor.color(85, 255, 255);      // 青蓝色
 
     private final JavaPlugin plugin;
     private final EMCManager emcManager;
     private final Map<UUID, Inventory> openInventories = new ConcurrentHashMap<>();
     private final Map<UUID, List<ItemStack>> pendingItems = new ConcurrentHashMap<>();
     private final Set<UUID> convertingPlayers = new HashSet<>();
+    private final Map<UUID, Boolean> conversionStatus = new ConcurrentHashMap<>();
     private final File pendingItemsFile;
 
     // 界面布局常量
@@ -51,7 +65,8 @@ public class TransmutationGUI implements InventoryHolder, Listener {
     private volatile long lastSaveTime = 0;
     private static final long SAVE_COOLDOWN = 5000;
 
-    private boolean sellClick = false; // 用于区分是点击按钮关闭还是 Q 键出售
+    // 修复：使用线程安全的映射来跟踪每个玩家的出售点击状态
+    private final Map<UUID, Boolean> sellClickMap = new ConcurrentHashMap<>();
 
     static {
         for (int i = 0; i < 45; i++) {
@@ -59,30 +74,21 @@ public class TransmutationGUI implements InventoryHolder, Listener {
         }
     }
 
-    public TransmutationGUI(JavaPlugin plugin, EMCManager emcManager) {
+    public ConvertMenu(JavaPlugin plugin, EMCManager emcManager) {
         this.plugin = plugin;
         this.emcManager = emcManager;
         this.pendingItemsFile = new File(plugin.getDataFolder(), "pending_items.yml");
 
-        // 确保数据目录存在
         if (!plugin.getDataFolder().exists()) {
             plugin.getDataFolder().mkdirs();
         }
 
         Bukkit.getPluginManager().registerEvents(this, plugin);
-
-        // 加载保存的待处理物品
         loadPendingItems();
-
-        // 启动自动保存任务
         startAutoSaveTask();
     }
 
-    /**
-     * 保存所有待处理物品到文件（异步执行）
-     */
     public void saveAllPendingItemsAsync() {
-        // 避免频繁保存
         if (saveInProgress || (System.currentTimeMillis() - lastSaveTime < SAVE_COOLDOWN)) {
             return;
         }
@@ -90,7 +96,6 @@ public class TransmutationGUI implements InventoryHolder, Listener {
         saveInProgress = true;
         lastSaveTime = System.currentTimeMillis();
 
-        // 创建数据快照
         Map<UUID, List<ItemStack>> snapshot = new HashMap<>(pendingItems);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -102,9 +107,6 @@ public class TransmutationGUI implements InventoryHolder, Listener {
         });
     }
 
-    /**
-     * 同步保存所有待处理物品到文件
-     */
     public void saveAllPendingItemsSync() {
         if (saveInProgress) return;
 
@@ -116,9 +118,6 @@ public class TransmutationGUI implements InventoryHolder, Listener {
         }
     }
 
-    /**
-     * 实际保存方法
-     */
     private void savePendingItemsToFile(Map<UUID, List<ItemStack>> itemsMap) {
         YamlConfiguration config = new YamlConfiguration();
 
@@ -138,9 +137,6 @@ public class TransmutationGUI implements InventoryHolder, Listener {
         }
     }
 
-    /**
-     * 从文件加载待处理物品
-     */
     @SuppressWarnings("unchecked")
     private void loadPendingItems() {
         if (!pendingItemsFile.exists()) return;
@@ -170,9 +166,6 @@ public class TransmutationGUI implements InventoryHolder, Listener {
         plugin.getLogger().info("已加载 " + pendingItems.size() + " 个玩家的待处理物品");
     }
 
-    /**
-     * 启动自动保存任务
-     */
     private void startAutoSaveTask() {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Map.Entry<UUID, Inventory> entry : openInventories.entrySet()) {
@@ -181,13 +174,10 @@ public class TransmutationGUI implements InventoryHolder, Listener {
                     savePendingItems(player, entry.getValue());
                 }
             }
-            saveAllPendingItemsAsync(); // 异步保存
-        }, 600, 600); // 每30秒保存一次（20 ticks = 1秒）
+            saveAllPendingItemsAsync();
+        }, 600, 600);
     }
 
-    /**
-     * 保存待处理物品
-     */
     private void savePendingItems(Player player, Inventory inv) {
         List<ItemStack> items = new ArrayList<>();
         for (int slot : INPUT_SLOTS) {
@@ -203,11 +193,14 @@ public class TransmutationGUI implements InventoryHolder, Listener {
         }
     }
 
-    /**
-     * 恢复待处理物品
-     */
     public void restorePendingItems(Player player) {
         UUID playerId = player.getUniqueId();
+
+        // 修复：使用更可靠的转换状态检查
+        if (conversionStatus.containsKey(playerId) || convertingPlayers.contains(playerId)) {
+            return;
+        }
+
         if (pendingItems.containsKey(playerId)) {
             List<ItemStack> items = pendingItems.get(playerId);
             pendingItems.remove(playerId);
@@ -220,96 +213,108 @@ public class TransmutationGUI implements InventoryHolder, Listener {
                 for (ItemStack item : leftover.values()) {
                     player.getWorld().dropItemNaturally(player.getLocation(), item);
                 }
-                player.sendMessage(ChatColor.RED + "由于您上次非正常退出，物品转换菜单中的物品已退还至您的背包和脚下");
+                // 使用渐变色消息
+                player.sendMessage(createGradientMessage("由于您上次非正常退出，物品转换菜单中的物品已退还至您的背包和脚下",
+                        ERROR_COLOR, WARNING_COLOR));
             } else {
-                player.sendMessage(ChatColor.YELLOW + "已恢复您上次在物品转换菜单中的物品");
+                player.sendMessage(createGradientMessage("已恢复您上次在物品转换菜单中的物品",
+                        PRIMARY_COLOR, SECONDARY_COLOR));
             }
         }
     }
 
-    /**
-     * 为玩家打开转换菜单
-     */
     public void open(Player player) {
-        // 恢复任何待处理物品
         restorePendingItems(player);
 
-        String title = ChatColor.translateAlternateColorCodes('&', "&l&6等价交换 - 物品转换菜单");
+        // 使用渐变色标题
+        Component title = Component.text()
+                .content("等价交换")
+                .color(PRIMARY_COLOR)
+                .append(Component.text(" - ", Style.style(INFO_COLOR)))
+                .append(Component.text("物品转换", Style.style(SECONDARY_COLOR, TextDecoration.BOLD)))
+                .build();
+
         Inventory inv = Bukkit.createInventory(this, 54, title);
 
-        // 填充背景
         ItemStack background = createBackgroundItem();
         for (int slot : BACKGROUND_SLOTS) {
             inv.setItem(slot, background);
         }
 
-        // 添加转换按钮
         updateConvertButton(inv, player, 0);
 
         player.openInventory(inv);
         openInventories.put(player.getUniqueId(), inv);
-        // 不再在open方法中调用 handleSellClick，因为它与Q键出售逻辑关联
-        // 播放音效
         player.playSound(player.getLocation(), Sound.BLOCK_WOODEN_DOOR_OPEN, 1.0f, 1.0f);
     }
 
-    /**
-     * 创建背景物品（淡蓝色玻璃板）
-     */
     private ItemStack createBackgroundItem() {
-        ItemStack item = new ItemStack(Material.LIGHT_BLUE_STAINED_GLASS_PANE);
+        ItemStack item = new ItemStack(Material.ORANGE_STAINED_GLASS_PANE);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(ChatColor.RESET + " ");
+            meta.displayName(Component.text(" ", Style.style(NamedTextColor.WHITE)));
             item.setItemMeta(meta);
         }
         return item;
     }
 
-    /**
-     * 创建转换按钮（附魔瓶）
-     * @param totalValue 当前菜单中物品的总价值
-     * @param player 当前玩家
-     */
     private void updateConvertButton(Inventory inv, Player player, double totalValue) {
         ItemStack convertButton = new ItemStack(Material.EXPERIENCE_BOTTLE);
         ItemMeta meta = convertButton.getItemMeta();
         if (meta == null) return;
 
-        meta.setDisplayName(ChatColor.GREEN + "放入物品进行转换");
+        // 使用渐变色名称
+        meta.displayName(Component.text("放入物品进行转换",
+                Style.style(BUTTON_COLOR, TextDecoration.BOLD)));
 
-        // 计算背包中所有物品的总价值
         double backpackValue = calculateBackpackTotalValue(player);
 
-        List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.GRAY + "菜单中物品价值: " + ChatColor.GOLD + String.format("%,.1f", totalValue) + " 灵叶");
-        lore.add(ChatColor.GRAY + "背包中物品价值: " + ChatColor.GOLD + String.format("%,.1f", backpackValue) + " 灵叶");
-        lore.add("");
-        lore.add(ChatColor.YELLOW + "关闭界面或点击进行转换");
-        lore.add(ChatColor.YELLOW + "按" + ChatColor.RED + " Q扔出 " + ChatColor.YELLOW + "转换背包中所有物品");
+        List<Component> lore = new ArrayList<>();
+        // 菜单价值 - 金色
+        lore.add(Component.text()
+                .content("菜单物品价值: ")
+                .color(INFO_COLOR)
+                .append(Component.text(String.format("%,.1f", totalValue) + " 灵叶",
+                        Style.style(VALUE_COLOR)))
+                .build());
 
+        // 背包价值 - 蓝色
+        lore.add(Component.text()
+                .content("背包物品价值: ")
+                .color(INFO_COLOR)
+                .append(Component.text(String.format("%,.1f", backpackValue) + " 灵叶",
+                        Style.style(SECONDARY_COLOR)))
+                .build());
 
-        meta.setLore(lore);
+        lore.add(Component.empty());
+
+        // 操作提示 - 绿色
+        lore.add(Component.text("关闭界面或点击进行转换",
+                Style.style(SUCCESS_COLOR)));
+
+        // 快捷键提示 - 金色+红色
+        lore.add(Component.text()
+                .content("按 ")
+                .color(PRIMARY_COLOR)
+                .append(Component.text("Q", Style.style(ERROR_COLOR, TextDecoration.BOLD)))
+                .append(Component.text(" 键出售背包物品",
+                        Style.style(PRIMARY_COLOR)))
+                .build());
+
+        meta.lore(lore);
         convertButton.setItemMeta(meta);
 
         inv.setItem(CONVERT_SLOT, convertButton);
     }
 
-    /**
-     * 检查一个物品是否为“基础物品”，即没有附魔、自定义名称、lore等附加数据。
-     * @param item 要检查的物品
-     * @return 如果是基础物品则返回 true，否则返回 false
-     */
     private boolean isBasicItem(ItemStack item) {
         if (item == null || item.getType().isAir()) {
-            return false; // 空气或null不是有效物品
+            return false;
         }
-        // 如果物品没有ItemMeta，那它一定是基础物品
         if (!item.hasItemMeta()) {
             return true;
         }
         ItemMeta meta = item.getItemMeta();
-        // 检查所有常见的修改：名称、Lore、附魔、自定义模型数据、持久化数据容器
         return !meta.hasDisplayName() &&
                 !meta.hasLore() &&
                 !meta.hasEnchants() &&
@@ -317,24 +322,15 @@ public class TransmutationGUI implements InventoryHolder, Listener {
                 meta.getPersistentDataContainer().isEmpty();
     }
 
-
-    /**
-     * 计算菜单中物品的总价值
-     * 现在只计算基础物品的价值
-     */
     private double calculateTotalValue(Inventory inv) {
         double total = 0.0;
         for (int slot : INPUT_SLOTS) {
             ItemStack item = inv.getItem(slot);
             if (item == null || item.getType() == Material.AIR) continue;
-
-            // 新增检查：只计算基础物品
-            if (!isBasicItem(item)) {
-                continue;
-            }
+            if (!isBasicItem(item)) continue;
 
             String itemId = item.getType().name();
-            int value = emcManager.getItemValue(itemId);
+            double value = emcManager.getItemValue(itemId);
             if (value > 0) {
                 total += value * item.getAmount();
             }
@@ -342,25 +338,16 @@ public class TransmutationGUI implements InventoryHolder, Listener {
         return total;
     }
 
-    /**
-     * 计算玩家背包中所有物品的总价值
-     * 现在只计算基础物品的价值
-     * @param player 玩家对象
-     * @return 背包物品总价值
-     */
     private double calculateBackpackTotalValue(Player player) {
         double total = 0.0;
         ItemStack[] contents = player.getInventory().getContents();
 
         for (ItemStack item : contents) {
             if (item == null || item.getType() == Material.AIR) continue;
-
-            if (!isBasicItem(item)) {
-                continue;
-            }
+            if (!isBasicItem(item)) continue;
 
             String itemId = item.getType().name();
-            int value = emcManager.getItemValue(itemId);
+            double value = emcManager.getItemValue(itemId);
 
             if (value > 0) {
                 total += value * item.getAmount();
@@ -369,73 +356,89 @@ public class TransmutationGUI implements InventoryHolder, Listener {
         return total;
     }
 
-    /**
-     * 出售玩家背包中所有有价值的【基础】物品，并解锁新物品。
-     * @param player 玩家对象
-     */
+    // 修复：确保经济操作在主线程执行
+    private void depositWithRetry(Player player, double amount) {
+        if (amount <= 0) return;
+
+        Economy econ = EMCShop.getEconomy();
+        if (econ == null) return;
+
+        // 确保在主线程执行经济操作
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            int retries = 0;
+            while (retries < 3) {
+                try {
+                    econ.depositPlayer(player, amount);
+                    return;
+                } catch (Exception e) {
+                    retries++;
+                    plugin.getLogger().warning("经济操作失败，重试中... (" + retries + "/3)");
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ignored) {}
+                }
+            }
+            plugin.getLogger().warning("无法完成经济操作: " + player.getName() + " - " + amount);
+        });
+    }
+
     private void sellAllItemsInBackpack(Player player) {
         double totalValue = 0.0;
         boolean skippedItems = false;
-        List<TranslatableComponent> unlockedComponents = new ArrayList<>(); // 用于收集解锁的物品名称
-        ItemStack[] contents = player.getInventory().getContents();
-
-        // 复制一份背包内容进行遍历，因为要修改原背包
+        List<TranslatableComponent> unlockedComponents = new ArrayList<>();
         ItemStack[] currentContents = player.getInventory().getContents().clone();
 
         for (int i = 0; i < currentContents.length; i++) {
-            ItemStack item = currentContents[i]; // 使用复制的物品
+            ItemStack item = currentContents[i];
             if (item == null || item.getType() == Material.AIR) continue;
 
-            // 新增检查：如果不是基础物品，则跳过
             if (!isBasicItem(item)) {
                 skippedItems = true;
                 continue;
             }
 
             String itemId = item.getType().name();
-            int value = emcManager.getItemValue(itemId);
+            double value = emcManager.getItemValue(itemId);
 
             if (value > 0) {
                 totalValue += value * item.getAmount();
-                // 仅当确认物品有价值时才从玩家实际背包中移除
                 player.getInventory().setItem(i, null);
 
-                // --- 添加解锁逻辑 ---
                 if (!emcManager.isItemUnlocked(player, itemId)) {
                     emcManager.unlockItem(player, itemId);
                     TranslatableComponent translatedName = Component.translatable(item.getType().translationKey());
                     unlockedComponents.add(translatedName);
                 }
-                // --- 解锁逻辑结束 ---
-            } else {
-                // 如果物品没有价值，也不应该被移除，所以这里不需要操作
             }
         }
 
-        // 添加经济
         if (totalValue > 0) {
-            Economy econ = EMCShop.getEconomy();
-            if (econ != null) {
-                econ.depositPlayer(player, totalValue);
-            }
-            player.sendMessage(ChatColor.AQUA + "出售背包物品获得 " +
-                    ChatColor.GREEN + String.format("%,.1f", totalValue) + " 🍃");
+            depositWithRetry(player, totalValue);
+            player.sendMessage(
+                    Component.text("出售背包物品获得 ", Style.style(SUCCESS_COLOR))
+                            .append(Component.text(String.format("%,.1f", totalValue),
+                                            Style.style(VALUE_COLOR, TextDecoration.BOLD))
+                                    .append(Component.text(" 灵叶", Style.style(SUCCESS_COLOR)))
+                            ));
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
         } else {
-            player.sendMessage(ChatColor.RED + "背包中没有可出售的基础物品！");
+            // 使用单色错误消息
+            player.sendMessage(Component.text("背包中没有可出售的基础物品！",
+                    Style.style(ERROR_COLOR)));
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.8f);
         }
 
-        // 解锁提示
         if (!unlockedComponents.isEmpty()) {
-            Component baseMessage = Component.text("解锁了新物品: ").color(NamedTextColor.AQUA);
+            Component baseMessage = Component.text("解锁了新物品: ", Style.style(SUCCESS_COLOR));
             for (int i = 0; i < unlockedComponents.size(); i++) {
                 if (i > 0) {
-                    baseMessage = baseMessage.append(Component.text(i < unlockedComponents.size() - 1 ? ", " : " 和 ").color(NamedTextColor.YELLOW));
+                    baseMessage = baseMessage.append(Component.text(
+                            i < unlockedComponents.size() - 1 ? ", " : " 和 ",
+                            Style.style(INFO_COLOR)));
                 }
                 baseMessage = baseMessage.append(
                         unlockedComponents.get(i)
-                                .color(NamedTextColor.YELLOW)
+                                .color(PRIMARY_COLOR)
                                 .decoration(TextDecoration.ITALIC, false)
                 );
             }
@@ -443,20 +446,20 @@ public class TransmutationGUI implements InventoryHolder, Listener {
         }
 
         if (skippedItems) {
-            player.sendMessage(ChatColor.YELLOW + "已自动跳过背包中无法转换的物品。");
+            player.sendMessage(Component.text("已自动跳过背包中无法转换的物品。",
+                    Style.style(WARNING_COLOR, TextDecoration.ITALIC)));
         }
     }
 
-    /**
-     * 执行转换操作
-     */
     private void performConversion(Player player, Inventory inv, boolean isNormalClose) {
         UUID playerId = player.getUniqueId();
 
         if (convertingPlayers.contains(playerId)) return;
 
         try {
+            conversionStatus.put(playerId, true);
             convertingPlayers.add(playerId);
+            pendingItems.remove(playerId);
 
             List<ItemStack> itemsSnapshot = new ArrayList<>();
             for (int slot : INPUT_SLOTS) {
@@ -466,9 +469,9 @@ public class TransmutationGUI implements InventoryHolder, Listener {
                 }
             }
 
-            // 如果菜单为空，直接提示并返回
             if (itemsSnapshot.isEmpty()) {
-                player.sendMessage(ChatColor.RED + "没发现任何物品呢？？");
+                player.sendMessage(createGradientMessage("没发现任何物品呢？？",
+                        WARNING_COLOR, ERROR_COLOR));
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.8f);
                 return;
             }
@@ -486,7 +489,7 @@ public class TransmutationGUI implements InventoryHolder, Listener {
                 }
 
                 String itemId = item.getType().name();
-                int value = emcManager.getItemValue(itemId);
+                double value = emcManager.getItemValue(itemId);
 
                 if (value > 0) {
                     totalValue += value * item.getAmount();
@@ -500,39 +503,35 @@ public class TransmutationGUI implements InventoryHolder, Listener {
                 }
             }
 
-            // 如果处理后总价值和解锁物品都为0，说明所有物品都无效
             if (totalValue == 0 && unlockedComponents.isEmpty()) {
-                player.sendMessage(ChatColor.RED + "好像没有可转换的物品哦~");
-                // 此时，下面的退还逻辑仍然会执行，将所有物品退还给玩家
+                player.sendMessage(createGradientMessage("好像没有可转换的物品哦~",
+                        WARNING_COLOR, ERROR_COLOR));
             }
 
-            // 添加经济
             if (totalValue > 0) {
-                Economy econ = EMCShop.getEconomy();
-                if (econ != null) {
-                    econ.depositPlayer(player, totalValue);
-                }
-                player.sendMessage(ChatColor.AQUA + "转换物品获得了 " +
-                        ChatColor.GREEN + String.format("%,.1f", totalValue) + " 🍃");
+                depositWithRetry(player, totalValue);
+                player.sendMessage(createGradientMessage("转换物品获得了 " +
+                                String.format("%,.1f", totalValue) + " 灵叶",
+                        PRIMARY_COLOR, SUCCESS_COLOR));
             }
 
-            // 解锁提示
             if (!unlockedComponents.isEmpty()) {
-                Component baseMessage = Component.text("解锁了新物品: ").color(NamedTextColor.AQUA);
+                Component baseMessage = Component.text("解锁了新物品: ", Style.style(SUCCESS_COLOR));
                 for (int i = 0; i < unlockedComponents.size(); i++) {
                     if (i > 0) {
-                        baseMessage = baseMessage.append(Component.text(i < unlockedComponents.size() - 1 ? ", " : " 和 ").color(NamedTextColor.YELLOW));
+                        baseMessage = baseMessage.append(Component.text(
+                                i < unlockedComponents.size() - 1 ? ", " : " 和 ",
+                                Style.style(INFO_COLOR)));
                     }
                     baseMessage = baseMessage.append(
                             unlockedComponents.get(i)
-                                    .color(NamedTextColor.YELLOW)
+                                    .color(PRIMARY_COLOR)
                                     .decoration(TextDecoration.ITALIC, false)
                     );
                 }
                 player.sendMessage(baseMessage);
             }
 
-            // 退还无效/非基础物品
             if (!itemsToReturn.isEmpty()) {
                 Map<Integer, ItemStack> leftover = player.getInventory().addItem(
                         itemsToReturn.toArray(new ItemStack[0])
@@ -542,51 +541,70 @@ public class TransmutationGUI implements InventoryHolder, Listener {
                     for (ItemStack item : leftover.values()) {
                         player.getWorld().dropItemNaturally(player.getLocation(), item);
                     }
-                    player.sendMessage(ChatColor.RED + "部分无法转换的物品因背包已满已掉落在地");
+                    player.sendMessage(createGradientMessage("部分无法转换的物品因背包已满已掉落在地",
+                            ERROR_COLOR, WARNING_COLOR));
                 }
 
-                // 仅在有成功转换的物品时，才发送“部分物品退还”的消息，避免信息重复
                 if (totalValue > 0 || !unlockedComponents.isEmpty()) {
-                    player.sendMessage(ChatColor.YELLOW + "部分无法转换的物品已退还。");
+                    player.sendMessage(Component.text("部分无法转换的物品已退还。",
+                            Style.style(WARNING_COLOR, TextDecoration.ITALIC)));
                 }
             }
 
-            // 清空菜单
+            // 修复：在转换完成后才清空物品槽位
             for (int slot : INPUT_SLOTS) {
                 inv.setItem(slot, null);
             }
 
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "转换过程中发生错误: " + e.getMessage(), e);
+            // 修复：在异常情况下保存物品，但不清空槽位
             savePendingItems(player, inv);
-            player.sendMessage(ChatColor.RED + "转换过程出错，物品已保存");
+            player.sendMessage(createGradientMessage("转换过程出错，物品已保存",
+                    ERROR_COLOR, WARNING_COLOR));
         } finally {
             convertingPlayers.remove(playerId);
+            conversionStatus.remove(playerId);
             openInventories.remove(playerId);
-            // 这里修改：只有当玩家真正离开或关闭菜单时才移除pendingItems，而不是每次转换都移除
-            // 否则，如果Q键出售后又立即关闭菜单，可能导致pendingItems被错误移除
-            // if (!convertingPlayers.contains(playerId)) {
-            //    pendingItems.remove(playerId);
-            // }
         }
     }
 
-    // =================================================================================
-    // 事件处理部分
-    // =================================================================================
+    // ===== 辅助方法：创建渐变色文本 =====
+    private Component createGradientComponent(String text, TextColor startColor, TextColor endColor) {
+        TextComponent.Builder builder = Component.text();
+        int length = text.length();
 
-    // handleSellClick 方法不再需要，因为我们直接在 sellAllItemsInBackpack 中处理
-    // public void handleSellClick() {
-    //     if (sellClick) {
-    //         sellClick = false;
-    //     }
-    // }
+        // 基岩版优化：限制最多4个颜色段
+        int segments = Math.min(4, length);
+        int segmentLength = (int) Math.ceil((double) length / segments);
 
+        for (int i = 0; i < segments; i++) {
+            int startIdx = i * segmentLength;
+            int endIdx = Math.min((i + 1) * segmentLength, length);
+            String segment = text.substring(startIdx, endIdx);
+
+            float ratio = (float) i / (segments - 1);
+            int r = (int) (startColor.red() * (1 - ratio) + endColor.red() * ratio);
+            int g = (int) (startColor.green() * (1 - ratio) + endColor.green() * ratio);
+            int b = (int) (startColor.blue() * (1 - ratio) + endColor.blue() * ratio);
+
+            builder.append(Component.text(segment,
+                    Style.style(TextColor.color(r, g, b))));
+        }
+
+        return builder.build();
+    }
+
+    private Component createGradientMessage(String text, TextColor startColor, TextColor endColor) {
+        return createGradientComponent(text, startColor, endColor)
+                .decoration(TextDecoration.ITALIC, false);
+    }
+
+    // ===== 事件处理部分 =====
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
 
-        Player player = (Player) event.getWhoClicked();
         UUID playerId = player.getUniqueId();
         Inventory inv = openInventories.get(playerId);
 
@@ -603,9 +621,7 @@ public class TransmutationGUI implements InventoryHolder, Listener {
             if (event.getAction() == InventoryAction.DROP_ONE_SLOT ||
                     event.getAction() == InventoryAction.DROP_ALL_SLOT) {
                 event.setCancelled(true);
-                // 直接调用出售背包物品的方法
                 sellAllItemsInBackpack(player);
-                // Q键出售后，不再需要关闭菜单，更新按钮信息即可
                 double totalValue = calculateTotalValue(inv);
                 updateConvertButton(inv, player, totalValue);
                 player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
@@ -613,12 +629,12 @@ public class TransmutationGUI implements InventoryHolder, Listener {
             }
 
             event.setCancelled(true);
-            this.sellClick = true; // 标记为点击按钮触发的关闭
-            player.closeInventory(); // 关闭菜单将触发 InventoryCloseEvent
+            // 修复：使用线程安全的映射来跟踪每个玩家的出售点击状态
+            sellClickMap.put(playerId, true);
+            player.closeInventory();
             return;
         }
 
-        // 延迟执行，确保物品已放入/移出槽位
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             double totalValue = calculateTotalValue(inv);
             updateConvertButton(inv, player, totalValue);
@@ -627,9 +643,8 @@ public class TransmutationGUI implements InventoryHolder, Listener {
 
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
 
-        Player player = (Player) event.getWhoClicked();
         Inventory inv = openInventories.get(player.getUniqueId());
 
         if (inv == null || !event.getInventory().equals(inv)) return;
@@ -649,30 +664,30 @@ public class TransmutationGUI implements InventoryHolder, Listener {
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player)) return;
+        if (!(event.getPlayer() instanceof Player player)) return;
 
-        Player player = (Player) event.getPlayer();
         UUID playerId = player.getUniqueId();
         Inventory inv = openInventories.get(playerId);
 
         if (inv == null) return;
 
-        // 如果是点击按钮触发的关闭 (sellClick 为 true) 或玩家主动关闭 (PLAYER)
-        // 那么执行转换逻辑
-        if (this.sellClick || event.getReason() == InventoryCloseEvent.Reason.PLAYER) {
-            this.sellClick = false; // 重置标记
-            performConversion(player, inv, true); // isNormalClose 设为 true
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 0.9f);
-        } else {
-            // 其他异常关闭情况，保存物品
-            savePendingItems(player, inv);
-            saveAllPendingItemsAsync();
-            player.sendMessage(ChatColor.YELLOW + "菜单异常关闭，物品已保存");
-            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8f, 0.9f);
+        try {
+            // 修复：使用线程安全的映射来检查出售点击状态
+            Boolean sellClick = sellClickMap.remove(playerId);
+
+            if (sellClick != null && sellClick || event.getReason() == Reason.PLAYER) {
+                performConversion(player, inv, true);
+                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 0.9f);
+            } else {
+                savePendingItems(player, inv);
+                saveAllPendingItemsAsync();
+                player.sendMessage(createGradientMessage("菜单异常关闭，物品已保存",
+                        WARNING_COLOR, ERROR_COLOR));
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8f, 0.9f);
+            }
+        } finally {
+            openInventories.remove(playerId);
         }
-        openInventories.remove(playerId);
-        // 不再在这里移除 pendingItems，因为 performConversion 已经处理
-        // 或者在 performConversion 的 finally 块中处理
     }
 
     @EventHandler
@@ -681,25 +696,27 @@ public class TransmutationGUI implements InventoryHolder, Listener {
         UUID playerId = player.getUniqueId();
         Inventory inv = openInventories.get(playerId);
 
-        if (inv != null) {
+        // 修复：如果玩家正在转换中，不保存物品
+        if (inv != null && !convertingPlayers.contains(playerId)) {
             savePendingItems(player, inv);
             saveAllPendingItemsSync();
             openInventories.remove(playerId);
-            // 确保玩家退出时，如果还有待处理物品，则保留
-            // pendingItems.remove(playerId); // 这里不应该移除，除非是完全处理掉了
         }
     }
 
     @Override
     public Inventory getInventory() {
-        return null; // 此方法通常在自定义InventoryHolder时用于返回实际Inventory实例，此处未使用
+        return null;
     }
 
     public void onPluginDisable() {
         for (Map.Entry<UUID, Inventory> entry : openInventories.entrySet()) {
             Player player = Bukkit.getPlayer(entry.getKey());
             if (player != null) {
-                savePendingItems(player, entry.getValue());
+                // 修复：如果玩家正在转换中，不保存物品
+                if (!convertingPlayers.contains(player.getUniqueId())) {
+                    savePendingItems(player, entry.getValue());
+                }
             }
         }
         saveAllPendingItemsSync();

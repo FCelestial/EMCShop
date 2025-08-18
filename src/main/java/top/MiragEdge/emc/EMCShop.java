@@ -11,9 +11,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import top.MiragEdge.emc.Commands.MainCommand;
 import top.MiragEdge.emc.Database.DatabaseConnector;
 import top.MiragEdge.emc.Database.DatabaseManager;
-import top.MiragEdge.emc.Gui.TransmutationGUI;
+import top.MiragEdge.emc.Gui.ConvertMenu;
 import top.MiragEdge.emc.Manager.EMCManager;
-import top.MiragEdge.emc.Manager.ShopManager;
 
 import java.util.Objects;
 
@@ -23,9 +22,8 @@ public class EMCShop extends JavaPlugin implements Listener {
     private DatabaseConnector dbConnector;
     private DatabaseManager dbManager;
     private EMCManager emcManager;
-    private ShopManager shopManager;
     private static Economy economy;
-    private TransmutationGUI transmutationGui;
+    private ConvertMenu convertMenu;
 
     @Override
     public void onEnable() {
@@ -47,13 +45,12 @@ public class EMCShop extends JavaPlugin implements Listener {
 
         // 初始化管理器
         emcManager = new EMCManager(this, dbManager);
-        shopManager = new ShopManager(this);
 
         // 注册事件监听器
         getServer().getPluginManager().registerEvents(this, this);
 
         // 注册命令
-        MainCommand commandExecutor = new MainCommand(this, emcManager, shopManager);
+        MainCommand commandExecutor = new MainCommand(this, emcManager);
         Objects.requireNonNull(getCommand("emcshop")).setExecutor(commandExecutor);
         Objects.requireNonNull(getCommand("emcshop")).setTabCompleter(commandExecutor);
 
@@ -74,9 +71,9 @@ public class EMCShop extends JavaPlugin implements Listener {
         }
 
         // 安全调用转换菜单的禁用方法
-        if (transmutationGui != null) {
+        if (convertMenu != null) {
             getLogger().info("正在保存待处理物品数据...");
-            transmutationGui.onPluginDisable();
+            convertMenu.onPluginDisable();
             getLogger().info("待处理物品数据已保存");
         }
 
@@ -102,7 +99,7 @@ public class EMCShop extends JavaPlugin implements Listener {
             return false;
         }
         economy = rsp.getProvider();
-        return economy != null;
+        return true;
     }
 
     // 玩家登录事件 - 加载玩家解锁数据
@@ -117,8 +114,8 @@ public class EMCShop extends JavaPlugin implements Listener {
         }
 
         // 恢复任何待处理的转换物品
-        if (transmutationGui != null) {
-            transmutationGui.restorePendingItems(player);
+        if (convertMenu != null) {
+            convertMenu.restorePendingItems(player);
         }
     }
 
@@ -139,10 +136,6 @@ public class EMCShop extends JavaPlugin implements Listener {
             emcManager.loadEMCValues(); // 确保EMCManager中有这个方法
         }
 
-        if (shopManager != null) {
-            shopManager.loadConfig();
-        }
-
         getLogger().info("配置已重载!");
     }
 
@@ -152,10 +145,6 @@ public class EMCShop extends JavaPlugin implements Listener {
 
     public EMCManager getEmcManager() {
         return emcManager;
-    }
-
-    public ShopManager getShopManager() {
-        return shopManager;
     }
 
     public DatabaseManager getDatabaseManager() {

@@ -2,6 +2,7 @@ package top.MiragEdge.emc.Gui;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -25,6 +26,17 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PreviewMenu implements Listener, InventoryHolder {
+
+    // 定义紫色调渐变色方案
+    private static final TextColor PRIMARY_COLOR = TextColor.fromHexString("#A974FF"); // 主色调 - 紫色
+    private static final TextColor SECONDARY_COLOR = TextColor.fromHexString("#FF6B6B"); // 辅色调 - 珊瑚红
+    private static final TextColor ACCENT_COLOR = TextColor.fromHexString("#FFD166"); // 强调色 - 琥珀色
+    private static final TextColor INFO_COLOR = TextColor.fromHexString("#9EE6CF"); // 信息色 - 薄荷绿
+    private static final TextColor SUCCESS_COLOR = TextColor.fromHexString("#9EE6A0"); // 成功色 - 亮绿色
+    private static final TextColor WARNING_COLOR = TextColor.fromHexString("#FFD166"); // 警告色 - 琥珀色
+    private static final TextColor ERROR_COLOR = TextColor.fromHexString("#FF6B6B"); // 错误色 - 珊瑚红
+    private static final TextColor HIGHLIGHT_COLOR = TextColor.fromHexString("#FFB347"); // 高亮色 - 橙黄色
+    private static final TextColor NEUTRAL_COLOR = TextColor.fromHexString("#D3D3D3"); // 中性色 - 浅灰色
 
     private final EMCShop plugin;
     private final EMCManager emcManager;
@@ -70,7 +82,7 @@ public class PreviewMenu implements Listener, InventoryHolder {
 
         // 检查玩家数据是否已加载
         if (emcManager.getPlayerData(playerId) == null) {
-            player.sendMessage(Component.text("正在加载您的数据，请稍候...", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("正在加载您的数据，请稍候...", WARNING_COLOR));
             // 异步加载玩家数据
             emcManager.onPlayerLogin(player);
             Bukkit.getScheduler().runTaskLater(plugin, () -> openPreviewMenu(player), 20L); // 1秒后重试
@@ -95,9 +107,17 @@ public class PreviewMenu implements Listener, InventoryHolder {
         page = Math.max(0, Math.min(page, totalPages - 1));
         playerPages.put(playerId, page);
 
+        // 创建渐变色标题
+        Component title = Component.text()
+                .append(Component.text("物", TextColor.fromHexString("#9B5DE5")))
+                .append(Component.text("品", TextColor.fromHexString("#8A5DE5")))
+                .append(Component.text("预", TextColor.fromHexString("#7A5DE5")))
+                .append(Component.text("览", TextColor.fromHexString("#6A5DE5")))
+                .append(Component.text(" | 第 " + (page + 1) + "/" + totalPages + " 页", INFO_COLOR))
+                .build();
+
         // 创建库存
-        Inventory inv = Bukkit.createInventory(this, 54,
-                Component.text("物品预览 | 第 " + (page + 1) + "/" + totalPages + " 页", NamedTextColor.DARK_PURPLE));
+        Inventory inv = Bukkit.createInventory(this, 54, title);
 
         // 设置顶部边框
         for (int slot : TOP_BORDER_SLOTS) {
@@ -114,13 +134,15 @@ public class PreviewMenu implements Listener, InventoryHolder {
 
         // 设置翻页按钮
         if (page > 0) {
-            inv.setItem(PREV_PAGE_SLOT, createNavigationItem(Material.PAPER, "§a上一页"));
+            inv.setItem(PREV_PAGE_SLOT, createNavigationItem(Material.PAPER,
+                    Component.text("« 上一页", ACCENT_COLOR)));
         } else {
             inv.setItem(PREV_PAGE_SLOT, createBorderItem(Material.PURPLE_STAINED_GLASS_PANE));
         }
 
         if (page < totalPages - 1) {
-            inv.setItem(NEXT_PAGE_SLOT, createNavigationItem(Material.PAPER, "§a下一页"));
+            inv.setItem(NEXT_PAGE_SLOT, createNavigationItem(Material.PAPER,
+                    Component.text("下一页 »", ACCENT_COLOR)));
         } else {
             inv.setItem(NEXT_PAGE_SLOT, createBorderItem(Material.PURPLE_STAINED_GLASS_PANE));
         }
@@ -134,7 +156,7 @@ public class PreviewMenu implements Listener, InventoryHolder {
 
         for (int i = startIdx; i < endIdx; i++) {
             String itemId = allItems.get(i);
-            int baseValue = emcManager.getItemValue(itemId);
+            double baseValue = emcManager.getItemValue(itemId);
             boolean unlocked = emcManager.isItemUnlocked(player, itemId);
             int slot = CONTENT_SLOTS[i - startIdx];
             inv.setItem(slot, createPreviewItem(itemId, baseValue, unlocked));
@@ -147,7 +169,7 @@ public class PreviewMenu implements Listener, InventoryHolder {
     private ItemStack createBorderItem(Material material) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(" ");
+        meta.displayName(Component.text(" "));
         item.setItemMeta(meta);
         return item;
     }
@@ -157,27 +179,30 @@ public class PreviewMenu implements Listener, InventoryHolder {
         ItemStack item = new ItemStack(Material.ENDER_EYE);
         ItemMeta meta = item.getItemMeta();
 
-        meta.setDisplayName("§d物品预览信息");
+        meta.displayName(Component.text("物品预览信息", PRIMARY_COLOR)
+                .decoration(TextDecoration.ITALIC, false));
 
         // 格式化转换系数为百分比
         String lossPercentage = percentageFormat.format(deconstructionFactor);
 
-        List<String> lore = new ArrayList<>();
-        lore.add("§6已解锁的物品会显示附魔光效");
-        lore.add("§c转换价值: 出售时获得的灵叶值");
-        lore.add("§b重构损耗: " + lossPercentage);
-        lore.add("§6总计物品: " + totalItems + "个");
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.text("已解锁的物品会显示附魔光效", ACCENT_COLOR));
+        lore.add(Component.text("转换价值: 出售时获得的灵叶值", SECONDARY_COLOR));
+        lore.add(Component.text("重构损耗: ", NEUTRAL_COLOR)
+                .append(Component.text(lossPercentage, HIGHLIGHT_COLOR)));
+        lore.add(Component.text("总计物品: ", NEUTRAL_COLOR)
+                .append(Component.text(totalItems + "个", HIGHLIGHT_COLOR)));
 
-        meta.setLore(lore);
+        meta.lore(lore);
         item.setItemMeta(meta);
         return item;
     }
 
     // 创建导航按钮（翻页）
-    private ItemStack createNavigationItem(Material material, String name) {
+    private ItemStack createNavigationItem(Material material, Component name) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(name);
+        meta.displayName(name.decoration(TextDecoration.ITALIC, false));
         item.setItemMeta(meta);
         return item;
     }
@@ -186,13 +211,14 @@ public class PreviewMenu implements Listener, InventoryHolder {
     private ItemStack createCloseButton() {
         ItemStack item = new ItemStack(Material.BARRIER);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName("§c关闭菜单");
+        meta.displayName(Component.text("✖ 关闭菜单", ERROR_COLOR)
+                .decoration(TextDecoration.ITALIC, false));
         item.setItemMeta(meta);
         return item;
     }
 
     // 创建预览物品
-    private ItemStack createPreviewItem(String itemId, int baseValue, boolean unlocked) {
+    private ItemStack createPreviewItem(String itemId, double baseValue, boolean unlocked) {
         Material material = Material.matchMaterial(itemId);
         if (material == null || material == Material.AIR) {
             material = Material.BARRIER;
@@ -207,7 +233,7 @@ public class PreviewMenu implements Listener, InventoryHolder {
 
             // 创建翻译组件并设置颜色（根据解锁状态）
             Component translatedName = Component.translatable(translationKey)
-                    .color(unlocked ? NamedTextColor.GREEN : NamedTextColor.RED)
+                    .color(unlocked ? SUCCESS_COLOR : ERROR_COLOR)
                     .decoration(TextDecoration.ITALIC, false);
 
             // 设置显示名称
@@ -216,19 +242,27 @@ public class PreviewMenu implements Listener, InventoryHolder {
             // 计算转换价值（确保为浮点数计算）
             double deconstructionValue = baseValue * (1 + deconstructionFactor);
 
-            List<String> lore = new ArrayList<>();
-            lore.add("§b转换价值: " + priceFormat.format(baseValue) + " 🍃");
-            lore.add("§6重构价格: " + priceFormat.format(deconstructionValue) + " 🍃");
-            lore.add("");
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text()
+                    .append(Component.text("转换价值: ", NEUTRAL_COLOR))
+                    .append(Component.text(priceFormat.format(baseValue) + " 灵叶", HIGHLIGHT_COLOR))
+                    .build());
+
+            lore.add(Component.text()
+                    .append(Component.text("重构价格: ", NEUTRAL_COLOR))
+                    .append(Component.text(priceFormat.format(deconstructionValue) + " 灵叶", HIGHLIGHT_COLOR))
+                    .build());
+
+            lore.add(Component.text(""));
 
             if (unlocked) {
-                lore.add("§a已解锁");
+                lore.add(Component.text("已解锁", SUCCESS_COLOR));
             } else {
-                lore.add("§c未解锁");
-                lore.add("§7通过转换来解锁物品");
+                lore.add(Component.text("未解锁", ERROR_COLOR));
+                lore.add(Component.text("通过转换来解锁物品", INFO_COLOR));
             }
 
-            meta.setLore(lore);
+            meta.lore(lore);
 
             // 为已解锁物品添加发光效果
             if (unlocked) {
@@ -274,7 +308,6 @@ public class PreviewMenu implements Listener, InventoryHolder {
         if (slot == NEXT_PAGE_SLOT) {
             player.openInventory(createPage(player, currentPage + 1));
             player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 0.6f, 0.9f);
-            return;
         }
     }
 

@@ -2,6 +2,7 @@ package top.MiragEdge.emc.Gui;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -25,6 +26,17 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PurchaseMenu implements Listener, InventoryHolder {
+
+    // 定义渐变色方案
+    private static final TextColor PRIMARY_COLOR = TextColor.fromHexString("#39C5BB"); // 主色调 - 蓝绿色
+    private static final TextColor SECONDARY_COLOR = TextColor.fromHexString("#FFD166"); // 辅色调 - 琥珀色
+    private static final TextColor ACCENT_COLOR = TextColor.fromHexString("#FF6B6B"); // 强调色 - 珊瑚红
+    private static final TextColor INFO_COLOR = TextColor.fromHexString("#A9DEF9"); // 信息色 - 淡蓝色
+    private static final TextColor SUCCESS_COLOR = TextColor.fromHexString("#9EE6A0"); // 成功色 - 薄荷绿
+    private static final TextColor WARNING_COLOR = TextColor.fromHexString("#FFD166"); // 警告色 - 琥珀色
+    private static final TextColor ERROR_COLOR = TextColor.fromHexString("#FF6B6B"); // 错误色 - 珊瑚红
+    private static final TextColor HIGHLIGHT_COLOR = TextColor.fromHexString("#FFB347"); // 高亮色 - 橙黄色
+    private static final TextColor NEUTRAL_COLOR = TextColor.fromHexString("#D3D3D3"); // 中性色 - 浅灰色
 
     private final EMCShop plugin;
     private final EMCManager emcManager;
@@ -72,7 +84,7 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         UUID playerId = player.getUniqueId();
 
         if (emcManager.getPlayerData(playerId) == null) {
-            player.sendMessage(Component.text("正在加载您的数据，请稍候...", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("正在加载您的数据，请稍候...", WARNING_COLOR));
             emcManager.onPlayerLogin(player);
             Bukkit.getScheduler().runTaskLater(plugin, () -> openPurchaseMenu(player), 20L);
             return;
@@ -100,8 +112,17 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         page = Math.max(0, Math.min(page, totalPages - 1));
         playerPages.put(playerId, page);
 
-        Inventory inv = Bukkit.createInventory(this, 54,
-                Component.text("等价交换 商店 | 第 " + (page + 1) + "/" + totalPages + " 页", NamedTextColor.AQUA));
+        // 使用渐变色标题
+        Component title = Component.text()
+                .append(Component.text("等", PRIMARY_COLOR))
+                .append(Component.text("价", TextColor.fromHexString("#36B9C5")))
+                .append(Component.text("交", TextColor.fromHexString("#32ADC0")))
+                .append(Component.text("换", TextColor.fromHexString("#2EA2BA")))
+                .append(Component.text(" 商店", TextColor.fromHexString("#2A96B5")))
+                .append(Component.text(" | 第 " + (page + 1) + "/" + totalPages + " 页", INFO_COLOR))
+                .build();
+
+        Inventory inv = Bukkit.createInventory(this, 54, title);
 
         // 设置边框和按钮
         for (int slot : TOP_BORDER_SLOTS) {
@@ -113,13 +134,15 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         }
 
         if (page > 0) {
-            inv.setItem(PREV_PAGE_SLOT, createNavigationItem(Material.PAPER, Component.text("上一页", NamedTextColor.GREEN)));
+            inv.setItem(PREV_PAGE_SLOT, createNavigationItem(Material.PAPER,
+                    Component.text("« 上一页", SECONDARY_COLOR)));
         } else {
             inv.setItem(PREV_PAGE_SLOT, createBorderItem(Material.LIGHT_BLUE_STAINED_GLASS_PANE));
         }
 
         if (page < totalPages - 1) {
-            inv.setItem(NEXT_PAGE_SLOT, createNavigationItem(Material.PAPER, Component.text("下一页", NamedTextColor.GREEN)));
+            inv.setItem(NEXT_PAGE_SLOT, createNavigationItem(Material.PAPER,
+                    Component.text("下一页 »", SECONDARY_COLOR)));
         } else {
             inv.setItem(NEXT_PAGE_SLOT, createBorderItem(Material.LIGHT_BLUE_STAINED_GLASS_PANE));
         }
@@ -161,15 +184,20 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         }
 
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text(player.getName(), NamedTextColor.GOLD)
+        meta.displayName(Component.text(player.getName(), HIGHLIGHT_COLOR)
                 .decoration(TextDecoration.ITALIC, false));
 
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text("已解锁: " + unlockedCount + "/" + totalItems, NamedTextColor.YELLOW));
+        lore.add(Component.text("已解锁: ", NEUTRAL_COLOR)
+                .append(Component.text(unlockedCount + "/" + totalItems, SECONDARY_COLOR)));
+
         double balance = plugin.getEconomy().getBalance(player);
-        lore.add(Component.text("余额: " + priceFormat.format(balance) + " 🍃", NamedTextColor.AQUA));
+        lore.add(Component.text("余额: ", NEUTRAL_COLOR)
+                .append(Component.text(priceFormat.format(balance) + " 灵叶", SUCCESS_COLOR)));
+
         String lossPercentage = String.format("%.2f", reconstructionLoss * 100);
-        lore.add(Component.text("重构损耗: " + lossPercentage + "%", NamedTextColor.RED));
+        lore.add(Component.text("重构损耗: ", NEUTRAL_COLOR)
+                .append(Component.text(lossPercentage + "%", ERROR_COLOR)));
 
         meta.lore(lore);
         item.setItemMeta(meta);
@@ -189,7 +217,7 @@ public class PurchaseMenu implements Listener, InventoryHolder {
     private ItemStack createCloseButton() {
         ItemStack item = new ItemStack(Material.BARRIER);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("关闭菜单", NamedTextColor.RED)
+        meta.displayName(Component.text("✖ 关闭菜单", ERROR_COLOR)
                 .decoration(TextDecoration.ITALIC, false));
         item.setItemMeta(meta);
         return item;
@@ -207,16 +235,29 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         if (meta != null) {
             String translationKey = material.translationKey();
             Component translatedName = Component.translatable(translationKey)
-                    .color(NamedTextColor.GREEN)
+                    .color(PRIMARY_COLOR)
                     .decoration(TextDecoration.ITALIC, false);
             meta.displayName(translatedName);
 
             double actualPrice = baseValue * (1 + reconstructionLoss);
             String formattedActualPrice = priceFormat.format(actualPrice);
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("重构价格: " + formattedActualPrice + " 🍃", NamedTextColor.GOLD));
-            lore.add(Component.text("左键点击购买一个", NamedTextColor.AQUA));
-            lore.add(Component.text("按Q扔出购买一组", NamedTextColor.AQUA));
+
+            // 使用渐变色显示价格信息
+            lore.add(Component.text()
+                    .append(Component.text("重构价格: ", NEUTRAL_COLOR))
+                    .append(Component.text(formattedActualPrice + " 灵叶", HIGHLIGHT_COLOR))
+                    .build());
+
+            lore.add(Component.text()
+                    .append(Component.text("左键", SECONDARY_COLOR))
+                    .append(Component.text("点击购买一个", INFO_COLOR))
+                    .build());
+
+            lore.add(Component.text()
+                    .append(Component.text("按Q", SECONDARY_COLOR))
+                    .append(Component.text("扔出购买一组", INFO_COLOR))
+                    .build());
 
             meta.lore(lore);
             item.setItemMeta(meta);
@@ -318,10 +359,16 @@ public class PurchaseMenu implements Listener, InventoryHolder {
 
     // 获取玩家已解锁物品列表
     private List<String> getUnlockedItems(Player player) {
-        List<String> allItems = new ArrayList<>(emcManager.getEmcValues().keySet());
+        // 获取玩家所有解锁物品（包括配置中已删除的）
+        Set<String> playerUnlocks = emcManager.getPlayerUnlockedItems(player.getUniqueId());
+
+        // 获取当前配置中所有有效物品ID
+        Set<String> validItems = emcManager.getEmcValues().keySet();
+
+        // 双重验证：只保留同时存在于解锁列表和当前配置的物品
         List<String> unlockedItems = new ArrayList<>();
-        for (String itemId : allItems) {
-            if (emcManager.isItemUnlocked(player, itemId)) {
+        for (String itemId : playerUnlocks) {
+            if (validItems.contains(itemId)) {
                 unlockedItems.add(itemId);
             }
         }
@@ -338,7 +385,10 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         // 余额不足
         if (balance < totalPrice) {
             String formattedTotalPrice = priceFormat.format(totalPrice);
-            player.sendMessage(Component.text("余额不足! 需要 " + formattedTotalPrice + " 灵叶", NamedTextColor.RED));
+            player.sendMessage(Component.text()
+                    .append(Component.text("余额不足! 需要 ", ERROR_COLOR))
+                    .append(Component.text(formattedTotalPrice + " 灵叶", HIGHLIGHT_COLOR))
+                    .build());
             // 错误提示：柔和的否定音（不刺耳）
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, ERROR_SOUND_VOLUME, BASE_PITCH);
             return;
@@ -347,7 +397,7 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         // 物品无效检查
         Material material = Material.matchMaterial(itemId);
         if (material == null || material == Material.AIR) {
-            player.sendMessage(Component.text("无效的物品ID: " + itemId, NamedTextColor.RED));
+            player.sendMessage(Component.text("无效的物品ID: " + itemId, ERROR_COLOR));
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, ERROR_SOUND_VOLUME, LOW_PITCH);
             return;
         }
@@ -356,7 +406,7 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         ItemStack itemStack = new ItemStack(material, amount);
         Map<Integer, ItemStack> leftOver = player.getInventory().addItem(itemStack);
         if (!leftOver.isEmpty()) {
-            player.sendMessage(Component.text("背包空间不足!", NamedTextColor.RED));
+            player.sendMessage(Component.text("背包空间不足!", ERROR_COLOR));
             // 空间不足：轻量的提示音
             player.playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_LEATHER, ERROR_SOUND_VOLUME, SOFT_PITCH);
             return;
@@ -370,14 +420,14 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         String formattedLoss = priceFormat.format(totalPrice - (baseValue * amount));
 
         Component message = Component.text()
-                .append(Component.text("成功购买 ", NamedTextColor.GOLD))
-                .append(itemName.colorIfAbsent(NamedTextColor.AQUA))
-                .append(Component.text(" × " + amount, NamedTextColor.AQUA))
-                .append(Component.text(" 花费 ", NamedTextColor.GOLD))
-                .append(Component.text(formattedTotalPrice + " 灵叶", NamedTextColor.GREEN))
+                .append(Component.text("成功购买 ", SUCCESS_COLOR))
+                .append(itemName.colorIfAbsent(PRIMARY_COLOR))
+                .append(Component.text(" × " + amount, HIGHLIGHT_COLOR))
+                .append(Component.text(" 花费 ", SUCCESS_COLOR))
+                .append(Component.text(formattedTotalPrice + " 灵叶", HIGHLIGHT_COLOR))
                 .append(Component.newline())
                 .append(Component.text("(基础价值: " + formattedBaseTotal + " + 重构损耗: " +
-                        formattedLoss + ")", NamedTextColor.GRAY))
+                        formattedLoss + ")", NEUTRAL_COLOR))
                 .build();
 
         player.sendMessage(message);

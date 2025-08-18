@@ -4,25 +4,29 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.entity.Player;
-import top.MiragEdge.emc.Gui.TransmutationGUI;
+import top.MiragEdge.emc.Gui.ConvertMenu;
 import top.MiragEdge.emc.Manager.EMCManager;
 import top.MiragEdge.emc.EMCShop;
 
 public class ConvertCommand implements CommandExecutor {
 
-    private final TransmutationGUI transmutationGui;
+    private static final String PERMISSION = "emcshop.user.convert";
+    private static final String PERM_MESSAGE = "§6需要达到3级才可以使用这个功能，可通过签到与每日任务获得经验!";
+
+    private final ConvertMenu convertMenu;
 
     public ConvertCommand(EMCShop plugin, EMCManager emcManager) {
-        this.transmutationGui = new TransmutationGUI(plugin, emcManager);
+        this.convertMenu = new ConvertMenu(plugin, emcManager);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!CommandUtils.isPlayer(sender)) return true;
+        if (!CommandUtils.checkPermission(sender, PERMISSION, PERM_MESSAGE)) return true;
         Player player = (Player) sender;
 
         // 打开转换菜单
-        transmutationGui.open(player);
+        convertMenu.open(player);
         return true;
     }
 }
