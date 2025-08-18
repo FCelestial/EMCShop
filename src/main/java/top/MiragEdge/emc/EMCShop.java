@@ -1,6 +1,7 @@
 package top.MiragEdge.emc;
 
 import net.milkbowl.vault.economy.Economy;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -13,8 +14,12 @@ import top.MiragEdge.emc.Database.DatabaseConnector;
 import top.MiragEdge.emc.Database.DatabaseManager;
 import top.MiragEdge.emc.Gui.ConvertMenu;
 import top.MiragEdge.emc.Manager.EMCManager;
+import top.MiragEdge.emc.Gui.PurchaseMenu;
 
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 public class EMCShop extends JavaPlugin implements Listener {
 
@@ -129,26 +134,30 @@ public class EMCShop extends JavaPlugin implements Listener {
      * 重载插件配置
      */
     public void reloadPlugin() {
-        reloadConfig();
-
-        // 重载管理器配置
-        if (emcManager != null) {
-            emcManager.loadEMCValues(); // 确保EMCManager中有这个方法
+        // 保存当前在线玩家列表（防止重载时玩家退出导致NPE）
+        Set<UUID> onlinePlayers = new HashSet<>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            onlinePlayers.add(player.getUniqueId());
         }
 
-        getLogger().info("配置已重载!");
-    }
+        // 重载主配置
+        reloadConfig();
 
-    public static EMCShop getInstance() {
-        return instance;
+        // 重载EMC物品配置
+        if (emcManager != null) {
+            emcManager.loadEMCValues(); // 重新加载物品配置
+
+            // 清理所有在线玩家的无效解锁记录
+            for (UUID playerId : onlinePlayers) {
+                emcManager.cleanInvalidUnlocks(playerId);
+            }
+        }
+
+        getLogger().info("配置已重载! 已清理 " + onlinePlayers.size() + " 名玩家的无效解锁记录");
     }
 
     public EMCManager getEmcManager() {
         return emcManager;
-    }
-
-    public DatabaseManager getDatabaseManager() {
-        return dbManager;
     }
 
     public static Economy getEconomy() {

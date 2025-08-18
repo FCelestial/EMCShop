@@ -68,9 +68,7 @@ public class ItemCommand implements CommandExecutor {
             return true;
         }
 
-        // --- 新增逻辑 ---
         // 1. 计算重构价格
-        // 由于emcValue是int类型，为了确保乘法结果是double类型并保留小数，这里进行强制类型转换
         double deconstructionValue = (double) emcValue * (1 + deconstructionFactor);
 
         // 2. 检查解锁状态

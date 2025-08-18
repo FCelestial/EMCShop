@@ -1,7 +1,6 @@
 package top.MiragEdge.emc.Gui;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
@@ -41,6 +40,8 @@ public class PurchaseMenu implements Listener, InventoryHolder {
     private final EMCShop plugin;
     private final EMCManager emcManager;
     private final Map<UUID, Integer> playerPages = new ConcurrentHashMap<>();
+    // 添加缓存存储每个玩家当前页面的解锁物品列表
+    private final Map<UUID, List<String>> playerPageItems = new ConcurrentHashMap<>();
     private static final int PAGE_SIZE = 36; // 4行x9列
     private static final int[] TOP_BORDER_SLOTS = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     private static final int[] BOTTOM_BORDER_SLOTS = {45, 46, 47, 48, 49, 50, 51, 52, 53};
@@ -152,12 +153,19 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         // 添加物品
         int startIdx = page * PAGE_SIZE;
         int endIdx = Math.min(startIdx + PAGE_SIZE, unlockedItems.size());
+
+        // 存储当前页面的物品列表
+        List<String> currentPageItems = new ArrayList<>();
         for (int i = startIdx; i < endIdx; i++) {
             String itemId = unlockedItems.get(i);
             double baseValue = emcManager.getItemValue(itemId);
             int slot = CONTENT_SLOTS[i - startIdx];
             inv.setItem(slot, createShopItem(itemId, baseValue));
+            currentPageItems.add(itemId); // 添加到当前页面物品列表
         }
+
+        // 缓存当前页面的物品列表
+        playerPageItems.put(playerId, currentPageItems);
 
         return inv;
     }
@@ -191,7 +199,7 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         lore.add(Component.text("已解锁: ", NEUTRAL_COLOR)
                 .append(Component.text(unlockedCount + "/" + totalItems, SECONDARY_COLOR)));
 
-        double balance = plugin.getEconomy().getBalance(player);
+        double balance = EMCShop.getEconomy().getBalance(player);
         lore.add(Component.text("余额: ", NEUTRAL_COLOR)
                 .append(Component.text(priceFormat.format(balance) + " 灵叶", SUCCESS_COLOR)));
 
@@ -284,13 +292,15 @@ public class PurchaseMenu implements Listener, InventoryHolder {
             player.closeInventory();
             // 关闭音效
             player.playSound(player.getLocation(), Sound.BLOCK_CHEST_CLOSE, UI_SOUND_VOLUME, LOW_PITCH);
+            // 清除缓存
+            playerPageItems.remove(playerId);
             return;
         }
 
         // 点击上一页
         if (slot == PREV_PAGE_SLOT && currentPage > 0) {
             player.openInventory(createPage(player, currentPage - 1));
-            // 翻页音效：轻脆的纸张翻动声
+            // 翻页音效
             player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, UI_SOUND_VOLUME, LOW_PITCH);
             return;
         }
@@ -301,10 +311,10 @@ public class PurchaseMenu implements Listener, InventoryHolder {
             int totalPages = (int) Math.ceil((double) unlockedItems.size() / PAGE_SIZE);
             if (currentPage < totalPages - 1) {
                 player.openInventory(createPage(player, currentPage + 1));
-                // 翻页音效：区分上下页的音调
+                // 翻页音效
                 player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, UI_SOUND_VOLUME, HIGH_PITCH);
             } else {
-                // 无效操作提示：柔和的反馈音
+                // 无效操作提示
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, ERROR_SOUND_VOLUME, SOFT_PITCH);
             }
             return;
@@ -313,10 +323,19 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         // 点击内容槽位（已解锁物品）
         if (isContentSlot(slot)) {
             int contentIndex = getContentIndex(slot, currentPage);
-            List<String> unlockedItems = getUnlockedItems(player);
 
-            if (contentIndex >= 0 && contentIndex < unlockedItems.size()) {
-                String itemId = unlockedItems.get(contentIndex);
+            // 获取当前页面的物品列表（缓存）
+            List<String> pageItems = playerPageItems.get(playerId);
+            if (pageItems == null) {
+                // 如果缓存不存在，重新创建页面
+                player.openInventory(createPage(player, currentPage));
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, ERROR_SOUND_VOLUME, SOFT_PITCH);
+                return;
+            }
+
+            // 确保索引在当前页范围内
+            if (contentIndex >= 0 && contentIndex < pageItems.size()) {
+                String itemId = pageItems.get(contentIndex);
 
                 if (event.getClick().isLeftClick()) {
                     purchaseItem(player, itemId, 1);
@@ -350,11 +369,10 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         return false;
     }
 
-    // 获取内容索引
+    // 获取内容索引（当前页内的索引）
     private int getContentIndex(int slot, int currentPage) {
         int startContentSlot = CONTENT_SLOTS[0];
-        int indexInPage = slot - startContentSlot;
-        return currentPage * PAGE_SIZE + indexInPage;
+        return slot - startContentSlot;
     }
 
     // 获取玩家已解锁物品列表
@@ -380,7 +398,7 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         double baseValue = emcManager.getItemValue(itemId);
         double actualPricePerItem = baseValue * (1 + reconstructionLoss);
         double totalPrice = actualPricePerItem * amount;
-        double balance = plugin.getEconomy().getBalance(player);
+        double balance = EMCShop.getEconomy().getBalance(player);
 
         // 余额不足
         if (balance < totalPrice) {
@@ -389,7 +407,7 @@ public class PurchaseMenu implements Listener, InventoryHolder {
                     .append(Component.text("余额不足! 需要 ", ERROR_COLOR))
                     .append(Component.text(formattedTotalPrice + " 灵叶", HIGHLIGHT_COLOR))
                     .build());
-            // 错误提示：柔和的否定音（不刺耳）
+            // 错误提示
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, ERROR_SOUND_VOLUME, BASE_PITCH);
             return;
         }
@@ -413,7 +431,7 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         }
 
         // 购买成功流程
-        plugin.getEconomy().withdrawPlayer(player, totalPrice);
+        EMCShop.getEconomy().withdrawPlayer(player, totalPrice);
         Component itemName = LocalizationUtil.getLocalizedName(material);
         String formattedTotalPrice = priceFormat.format(totalPrice);
         String formattedBaseTotal = priceFormat.format(baseValue * amount);
@@ -431,7 +449,7 @@ public class PurchaseMenu implements Listener, InventoryHolder {
                 .build();
 
         player.sendMessage(message);
-        // 购买成功：1.21新增的收集音效（清脆悦耳）
+        // 购买成功
         player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, SUCCESS_SOUND_VOLUME, HIGH_PITCH);
 
         // 刷新菜单
