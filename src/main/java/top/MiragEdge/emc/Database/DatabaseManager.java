@@ -78,8 +78,11 @@ public class DatabaseManager {
 
     private void processPlayerTasks(Connection conn, List<DatabaseTask> tasks) throws SQLException {
         try {
+            // SQLite不支持设置事务隔离级别，跳过此设置
+            if (!connector.isSQLite()) {
+                conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            }
             conn.setAutoCommit(false);
-            conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 
             for (DatabaseTask task : tasks) {
                 switch (task.taskType) {
@@ -256,8 +259,15 @@ public class DatabaseManager {
 
         // 插入新数据
         if (!unlockedItems.isEmpty()) {
-            String insertSql = "INSERT INTO player_unlocks (player_uuid, item_id) VALUES (?, ?) " +
-                    "ON DUPLICATE KEY UPDATE unlocked_at = CURRENT_TIMESTAMP";
+            // SQLite和MySQL的INSERT语句不同
+            String insertSql;
+            if (connector.isSQLite()) {
+                insertSql = "INSERT OR REPLACE INTO player_unlocks (player_uuid, item_id, unlocked_at) VALUES (?, ?, CURRENT_TIMESTAMP)";
+            } else {
+                insertSql = "INSERT INTO player_unlocks (player_uuid, item_id) VALUES (?, ?) " +
+                        "ON DUPLICATE KEY UPDATE unlocked_at = CURRENT_TIMESTAMP";
+            }
+
             try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
                 for (String itemId : unlockedItems) {
                     insertStmt.setString(1, playerId.toString());
@@ -311,7 +321,10 @@ public class DatabaseManager {
 
     private boolean isDeadlockError(SQLException e) {
         return e.getErrorCode() == 1213 ||
-                (e.getMessage() != null && e.getMessage().contains("Deadlock"));
+                (e.getMessage() != null && e.getMessage().contains("Deadlock")) ||
+                // SQLite死锁错误码
+                e.getErrorCode() == 5 || // SQLITE_BUSY
+                (e.getMessage() != null && e.getMessage().contains("database is locked"));
     }
 
     // 关闭资源
@@ -327,21 +340,54 @@ public class DatabaseManager {
         }
     }
 
-    // 创建表的方法保持不变
+    // 创建表的方法 - 适配SQLite和MySQL
     private void createTables() {
-        String sql = "CREATE TABLE IF NOT EXISTS player_unlocks (" +
-                "id INT AUTO_INCREMENT PRIMARY KEY," +
-                "player_uuid VARCHAR(36) NOT NULL," +
-                "item_id VARCHAR(64) NOT NULL," +
-                "unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-                "UNIQUE KEY unique_unlock (player_uuid, item_id)" +
-                ")";
+        String sql;
+        if (connector.isSQLite()) {
+            sql = "CREATE TABLE IF NOT EXISTS player_unlocks (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "player_uuid TEXT NOT NULL," +
+                    "item_id TEXT NOT NULL," +
+                    "unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                    "UNIQUE(player_uuid, item_id)" +
+                    ")";
+        } else {
+            sql = "CREATE TABLE IF NOT EXISTS player_unlocks (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "player_uuid VARCHAR(36) NOT NULL," +
+                    "item_id VARCHAR(64) NOT NULL," +
+                    "unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                    "UNIQUE KEY unique_unlock (player_uuid, item_id)" +
+                    ")";
+        }
 
         try (Connection conn = connector.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.execute();
+            logger.info("数据库表创建/检查完成 - 使用" + (connector.isSQLite() ? "SQLite" : "MySQL"));
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "创建数据库表失败", e);
         }
+    }
+
+    /**
+     * 获取当前数据库类型
+     */
+    public String getDatabaseType() {
+        return connector.getDatabaseType();
+    }
+
+    /**
+     * 检查是否是SQLite数据库
+     */
+    public boolean isSQLite() {
+        return connector.isSQLite();
+    }
+
+    /**
+     * 检查是否是MySQL数据库
+     */
+    public boolean isMySQL() {
+        return connector.isMySQL();
     }
 }

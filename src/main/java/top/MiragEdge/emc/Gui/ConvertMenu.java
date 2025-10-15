@@ -1,7 +1,6 @@
 package top.MiragEdge.emc.Gui;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TranslatableComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
@@ -28,6 +27,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import top.MiragEdge.emc.Manager.EMCManager;
 import top.MiragEdge.emc.EMCShop;
+import top.MiragEdge.emc.Utils.MessageUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -213,12 +213,9 @@ public class ConvertMenu implements InventoryHolder, Listener {
                 for (ItemStack item : leftover.values()) {
                     player.getWorld().dropItemNaturally(player.getLocation(), item);
                 }
-                // 使用渐变色消息
-                player.sendMessage(createGradientMessage("由于您上次非正常退出，物品转换菜单中的物品已退还至您的背包和脚下",
-                        ERROR_COLOR, WARNING_COLOR));
+                player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.items-returned"));
             } else {
-                player.sendMessage(createGradientMessage("已恢复您上次在物品转换菜单中的物品",
-                        PRIMARY_COLOR, SECONDARY_COLOR));
+                player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.items-restored"));
             }
         }
     }
@@ -226,13 +223,8 @@ public class ConvertMenu implements InventoryHolder, Listener {
     public void open(Player player) {
         restorePendingItems(player);
 
-        // 使用渐变色标题
-        Component title = Component.text()
-                .content("等价交换")
-                .color(PRIMARY_COLOR)
-                .append(Component.text(" - ", Style.style(INFO_COLOR)))
-                .append(Component.text("物品转换", Style.style(SECONDARY_COLOR, TextDecoration.BOLD)))
-                .build();
+        // 从配置读取标题
+        Component title = MessageUtil.getInstance().getMessage("convert-menu.title");
 
         Inventory inv = Bukkit.createInventory(this, 54, title);
 
@@ -263,42 +255,36 @@ public class ConvertMenu implements InventoryHolder, Listener {
         ItemMeta meta = convertButton.getItemMeta();
         if (meta == null) return;
 
-        // 使用渐变色名称
-        meta.displayName(Component.text("放入物品进行转换",
-                Style.style(BUTTON_COLOR, TextDecoration.BOLD)));
+        String currencyName = MessageUtil.getInstance().getCurrencyName();
+
+        // 使用配置中的按钮名称
+        meta.displayName(MessageUtil.getInstance().getMessage("convert-menu.convert-button-name"));
 
         double backpackValue = calculateBackpackTotalValue(player);
 
         List<Component> lore = new ArrayList<>();
-        // 菜单价值 - 金色
+        // 菜单价值
         lore.add(Component.text()
-                .content("菜单物品价值: ")
-                .color(INFO_COLOR)
-                .append(Component.text(String.format("%,.1f", totalValue) + " 灵叶",
-                        Style.style(VALUE_COLOR)))
+                .append(Component.text("菜单物品价值: ", INFO_COLOR))
+                .append(Component.text(String.format("%,.1f", totalValue) + " " + currencyName, VALUE_COLOR))
                 .build());
 
-        // 背包价值 - 蓝色
+        // 背包价值
         lore.add(Component.text()
-                .content("背包物品价值: ")
-                .color(INFO_COLOR)
-                .append(Component.text(String.format("%,.1f", backpackValue) + " 灵叶",
-                        Style.style(SECONDARY_COLOR)))
+                .append(Component.text("背包物品价值: ", INFO_COLOR))
+                .append(Component.text(String.format("%,.1f", backpackValue) + " " + currencyName, SECONDARY_COLOR))
                 .build());
 
         lore.add(Component.empty());
 
-        // 操作提示 - 绿色
-        lore.add(Component.text("关闭界面或点击进行转换",
-                Style.style(SUCCESS_COLOR)));
+        // 操作提示
+        lore.add(Component.text("关闭界面或点击进行转换", SUCCESS_COLOR));
 
-        // 快捷键提示 - 金色+红色
+        // 快捷键提示
         lore.add(Component.text()
-                .content("按 ")
-                .color(PRIMARY_COLOR)
-                .append(Component.text("Q", Style.style(ERROR_COLOR, TextDecoration.BOLD)))
-                .append(Component.text(" 键出售背包物品",
-                        Style.style(PRIMARY_COLOR)))
+                .append(Component.text("按 ", PRIMARY_COLOR))
+                .append(Component.text("Q", ERROR_COLOR).decorate(TextDecoration.BOLD))
+                .append(Component.text(" 键出售背包物品", PRIMARY_COLOR))
                 .build());
 
         meta.lore(lore);
@@ -414,27 +400,26 @@ public class ConvertMenu implements InventoryHolder, Listener {
 
         if (totalValue > 0) {
             depositWithRetry(player, totalValue);
-            player.sendMessage(
-                    Component.text("出售背包物品获得 ", Style.style(SUCCESS_COLOR))
-                            .append(Component.text(String.format("%,.1f", totalValue),
-                                            Style.style(VALUE_COLOR, TextDecoration.BOLD))
-                                    .append(Component.text(" 灵叶", Style.style(SUCCESS_COLOR)))
-                            ));
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("amount", String.format("%,.1f", totalValue));
+            placeholders.put("currency", MessageUtil.getInstance().getCurrencyName());
+            player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.backpack-sold", placeholders));
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
         } else {
-            // 使用单色错误消息
-            player.sendMessage(Component.text("背包中没有可出售的基础物品！",
-                    Style.style(ERROR_COLOR)));
+            player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.no-backpack-items"));
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.8f);
         }
 
         if (!unlockedComponents.isEmpty()) {
-            Component baseMessage = Component.text("解锁了新物品: ", Style.style(SUCCESS_COLOR));
+            Component baseMessage = MessageUtil.getInstance().getMessage("convert-menu.unlocked-items");
+            String commaSeparator = MessageUtil.getInstance().getRawMessage("general.comma-separator");
+            String andSeparator = MessageUtil.getInstance().getRawMessage("general.and-separator");
+
             for (int i = 0; i < unlockedComponents.size(); i++) {
                 if (i > 0) {
                     baseMessage = baseMessage.append(Component.text(
-                            i < unlockedComponents.size() - 1 ? ", " : " 和 ",
-                            Style.style(INFO_COLOR)));
+                            i < unlockedComponents.size() - 1 ? commaSeparator : andSeparator,
+                            INFO_COLOR));
                 }
                 baseMessage = baseMessage.append(
                         unlockedComponents.get(i)
@@ -446,8 +431,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
         }
 
         if (skippedItems) {
-            player.sendMessage(Component.text("已自动跳过背包中无法转换的物品。",
-                    Style.style(WARNING_COLOR, TextDecoration.ITALIC)));
+            player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.skipped-items"));
         }
     }
 
@@ -470,8 +454,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
             }
 
             if (itemsSnapshot.isEmpty()) {
-                player.sendMessage(createGradientMessage("没发现任何物品呢？？",
-                        WARNING_COLOR, ERROR_COLOR));
+                player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.no-items"));
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.8f);
                 return;
             }
@@ -504,24 +487,27 @@ public class ConvertMenu implements InventoryHolder, Listener {
             }
 
             if (totalValue == 0 && unlockedComponents.isEmpty()) {
-                player.sendMessage(createGradientMessage("好像没有可转换的物品哦~",
-                        WARNING_COLOR, ERROR_COLOR));
+                player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.no-convertible-items"));
             }
 
             if (totalValue > 0) {
                 depositWithRetry(player, totalValue);
-                player.sendMessage(createGradientMessage("转换物品获得了 " +
-                                String.format("%,.1f", totalValue) + " 灵叶",
-                        PRIMARY_COLOR, SUCCESS_COLOR));
+                Map<String, String> placeholders = new HashMap<>();
+                placeholders.put("amount", String.format("%,.1f", totalValue));
+                placeholders.put("currency", MessageUtil.getInstance().getCurrencyName());
+                player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.conversion-success", placeholders));
             }
 
             if (!unlockedComponents.isEmpty()) {
-                Component baseMessage = Component.text("解锁了新物品: ", Style.style(SUCCESS_COLOR));
+                Component baseMessage = MessageUtil.getInstance().getMessage("convert-menu.unlocked-items");
+                String commaSeparator = MessageUtil.getInstance().getRawMessage("general.comma-separator");
+                String andSeparator = MessageUtil.getInstance().getRawMessage("general.and-separator");
+
                 for (int i = 0; i < unlockedComponents.size(); i++) {
                     if (i > 0) {
                         baseMessage = baseMessage.append(Component.text(
-                                i < unlockedComponents.size() - 1 ? ", " : " 和 ",
-                                Style.style(INFO_COLOR)));
+                                i < unlockedComponents.size() - 1 ? commaSeparator : andSeparator,
+                                INFO_COLOR));
                     }
                     baseMessage = baseMessage.append(
                             unlockedComponents.get(i)
@@ -541,13 +527,11 @@ public class ConvertMenu implements InventoryHolder, Listener {
                     for (ItemStack item : leftover.values()) {
                         player.getWorld().dropItemNaturally(player.getLocation(), item);
                     }
-                    player.sendMessage(createGradientMessage("部分无法转换的物品因背包已满已掉落在地",
-                            ERROR_COLOR, WARNING_COLOR));
+                    player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.items-dropped"));
                 }
 
                 if (totalValue > 0 || !unlockedComponents.isEmpty()) {
-                    player.sendMessage(Component.text("部分无法转换的物品已退还。",
-                            Style.style(WARNING_COLOR, TextDecoration.ITALIC)));
+                    player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.some-items-returned"));
                 }
             }
 
@@ -560,44 +544,12 @@ public class ConvertMenu implements InventoryHolder, Listener {
             plugin.getLogger().log(Level.SEVERE, "转换过程中发生错误: " + e.getMessage(), e);
             // 修复：在异常情况下保存物品，但不清空槽位
             savePendingItems(player, inv);
-            player.sendMessage(createGradientMessage("转换过程出错，物品已保存",
-                    ERROR_COLOR, WARNING_COLOR));
+            player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.error-occurred"));
         } finally {
             convertingPlayers.remove(playerId);
             conversionStatus.remove(playerId);
             openInventories.remove(playerId);
         }
-    }
-
-    // ===== 辅助方法：创建渐变色文本 =====
-    private Component createGradientComponent(String text, TextColor startColor, TextColor endColor) {
-        TextComponent.Builder builder = Component.text();
-        int length = text.length();
-
-        // 基岩版优化：限制最多4个颜色段
-        int segments = Math.min(4, length);
-        int segmentLength = (int) Math.ceil((double) length / segments);
-
-        for (int i = 0; i < segments; i++) {
-            int startIdx = i * segmentLength;
-            int endIdx = Math.min((i + 1) * segmentLength, length);
-            String segment = text.substring(startIdx, endIdx);
-
-            float ratio = (float) i / (segments - 1);
-            int r = (int) (startColor.red() * (1 - ratio) + endColor.red() * ratio);
-            int g = (int) (startColor.green() * (1 - ratio) + endColor.green() * ratio);
-            int b = (int) (startColor.blue() * (1 - ratio) + endColor.blue() * ratio);
-
-            builder.append(Component.text(segment,
-                    Style.style(TextColor.color(r, g, b))));
-        }
-
-        return builder.build();
-    }
-
-    private Component createGradientMessage(String text, TextColor startColor, TextColor endColor) {
-        return createGradientComponent(text, startColor, endColor)
-                .decoration(TextDecoration.ITALIC, false);
     }
 
     // ===== 事件处理部分 =====
@@ -681,8 +633,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
             } else {
                 savePendingItems(player, inv);
                 saveAllPendingItemsAsync();
-                player.sendMessage(createGradientMessage("菜单异常关闭，物品已保存",
-                        WARNING_COLOR, ERROR_COLOR));
+                player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.menu-saved"));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8f, 0.9f);
             }
         } finally {

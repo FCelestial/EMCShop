@@ -18,6 +18,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import top.MiragEdge.emc.EMCShop;
 import top.MiragEdge.emc.Manager.EMCManager;
+import top.MiragEdge.emc.Utils.MessageUtil;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -81,7 +82,7 @@ public class PreviewMenu implements Listener, InventoryHolder {
 
         // 检查玩家数据是否已加载
         if (emcManager.getPlayerData(playerId) == null) {
-            player.sendMessage(Component.text("正在加载您的数据，请稍候...", WARNING_COLOR));
+            player.sendMessage(MessageUtil.getInstance().getMessage("general.data-loading"));
             // 异步加载玩家数据
             emcManager.onPlayerLogin(player);
             Bukkit.getScheduler().runTaskLater(plugin, () -> openPreviewMenu(player), 20L); // 1秒后重试
@@ -106,14 +107,11 @@ public class PreviewMenu implements Listener, InventoryHolder {
         page = Math.max(0, Math.min(page, totalPages - 1));
         playerPages.put(playerId, page);
 
-        // 创建渐变色标题
-        Component title = Component.text()
-                .append(Component.text("物", TextColor.fromHexString("#9B5DE5")))
-                .append(Component.text("品", TextColor.fromHexString("#8A5DE5")))
-                .append(Component.text("预", TextColor.fromHexString("#7A5DE5")))
-                .append(Component.text("览", TextColor.fromHexString("#6A5DE5")))
-                .append(Component.text(" | 第 " + (page + 1) + "/" + totalPages + " 页", INFO_COLOR))
-                .build();
+        // 从配置创建标题
+        Map<String, String> titlePlaceholders = new HashMap<>();
+        titlePlaceholders.put("page", String.valueOf(page + 1));
+        titlePlaceholders.put("total", String.valueOf(totalPages));
+        Component title = MessageUtil.getInstance().getMessage("preview-menu.title", titlePlaceholders);
 
         // 创建库存
         Inventory inv = Bukkit.createInventory(this, 54, title);
@@ -183,10 +181,11 @@ public class PreviewMenu implements Listener, InventoryHolder {
 
         // 格式化转换系数为百分比
         String lossPercentage = percentageFormat.format(deconstructionFactor);
+        String currencyName = MessageUtil.getInstance().getCurrencyName();
 
         List<Component> lore = new ArrayList<>();
         lore.add(Component.text("已解锁的物品会显示附魔光效", ACCENT_COLOR));
-        lore.add(Component.text("转换价值: 出售时获得的灵叶值", SECONDARY_COLOR));
+        lore.add(Component.text("转换价值: 出售时获得的" + currencyName + "值", SECONDARY_COLOR));
         lore.add(Component.text("重构损耗: ", NEUTRAL_COLOR)
                 .append(Component.text(lossPercentage, HIGHLIGHT_COLOR)));
         lore.add(Component.text("总计物品: ", NEUTRAL_COLOR)
@@ -240,25 +239,26 @@ public class PreviewMenu implements Listener, InventoryHolder {
 
             // 计算转换价值（确保为浮点数计算）
             double deconstructionValue = baseValue * (1 + deconstructionFactor);
+            String currencyName = MessageUtil.getInstance().getCurrencyName();
 
             List<Component> lore = new ArrayList<>();
             lore.add(Component.text()
                     .append(Component.text("转换价值: ", NEUTRAL_COLOR))
-                    .append(Component.text(priceFormat.format(baseValue) + " 灵叶", HIGHLIGHT_COLOR))
+                    .append(Component.text(priceFormat.format(baseValue) + " " + currencyName, HIGHLIGHT_COLOR))
                     .build());
 
             lore.add(Component.text()
                     .append(Component.text("重构价格: ", NEUTRAL_COLOR))
-                    .append(Component.text(priceFormat.format(deconstructionValue) + " 灵叶", HIGHLIGHT_COLOR))
+                    .append(Component.text(priceFormat.format(deconstructionValue) + " " + currencyName, HIGHLIGHT_COLOR))
                     .build());
 
             lore.add(Component.text(""));
 
             if (unlocked) {
-                lore.add(Component.text("已解锁", SUCCESS_COLOR));
+                lore.add(MessageUtil.getInstance().getMessage("preview-menu.unlocked"));
             } else {
-                lore.add(Component.text("未解锁", ERROR_COLOR));
-                lore.add(Component.text("通过转换来解锁物品", INFO_COLOR));
+                lore.add(MessageUtil.getInstance().getMessage("preview-menu.locked"));
+                lore.add(MessageUtil.getInstance().getMessage("preview-menu.unlock-hint"));
             }
 
             meta.lore(lore);

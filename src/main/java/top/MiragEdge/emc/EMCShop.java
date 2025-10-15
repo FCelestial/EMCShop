@@ -14,7 +14,7 @@ import top.MiragEdge.emc.Database.DatabaseConnector;
 import top.MiragEdge.emc.Database.DatabaseManager;
 import top.MiragEdge.emc.Gui.ConvertMenu;
 import top.MiragEdge.emc.Manager.EMCManager;
-import top.MiragEdge.emc.Gui.PurchaseMenu;
+import top.MiragEdge.emc.Utils.MessageUtil;
 
 import java.util.HashSet;
 import java.util.Objects;
@@ -32,10 +32,17 @@ public class EMCShop extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
+        getLogger().info(" ");
+        getLogger().info("=======================");
+        getLogger().info(" ");
+
         instance = this;
 
         // 保存默认配置
         saveDefaultConfig();
+
+        // 初始化消息工具
+        MessageUtil.initialize(this);
 
         // 初始化数据库连接
         dbConnector = new DatabaseConnector(this);
@@ -60,10 +67,15 @@ public class EMCShop extends JavaPlugin implements Listener {
         Objects.requireNonNull(getCommand("emcshop")).setTabCompleter(commandExecutor);
 
         getLogger().info("等价交换插件已启用");
+        getLogger().info("=======================");
+        getLogger().info(" ");
     }
 
     @Override
     public void onDisable() {
+        getLogger().info(" ");
+        getLogger().info("=======================");
+        getLogger().info(" ");
         getLogger().info("开始关闭插件...");
 
         // 同步保存在线玩家数据
@@ -96,6 +108,9 @@ public class EMCShop extends JavaPlugin implements Listener {
         }
 
         getLogger().info("插件已安全关闭");
+        getLogger().info(" ");
+        getLogger().info("=======================");
+        getLogger().info(" ");
     }
 
     private boolean setupEconomy() {
@@ -143,6 +158,9 @@ public class EMCShop extends JavaPlugin implements Listener {
         // 重载主配置
         reloadConfig();
 
+        // 重载消息配置
+        MessageUtil.getInstance().reloadMessageConfig();
+
         // 重载EMC物品配置
         if (emcManager != null) {
             emcManager.loadEMCValues(); // 重新加载物品配置
@@ -153,7 +171,7 @@ public class EMCShop extends JavaPlugin implements Listener {
             }
         }
 
-        getLogger().info("配置已重载! 已清理 " + onlinePlayers.size() + " 名玩家的无效解锁记录");
+        getLogger().info("配置和消息文件已重载，自动清理了 " + onlinePlayers.size() + " 名玩家的无效解锁记录。");
     }
 
     public EMCManager getEmcManager() {

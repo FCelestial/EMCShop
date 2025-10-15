@@ -2,70 +2,70 @@
 EMC_VALUES:
   BASE:
     # ===== 泥土/沙子/雪/冰/黑曜石类 =====
-    GRASS_BLOCK: 2 # 草方块 - 基础
-    DIRT: 1 # 泥土 - 基准物品
-    PODZOL: 2 # 灰化土 - 稀有群系，略微提高
-    COARSE_DIRT: 1 # 砂土 - 基础
-    ROOTED_DIRT: 2 # 缠根泥土 - 洞穴更新，略微提高
-    CRIMSON_NYLIUM: 4 # 绯红菌岩 - 下界特有，略高
-    WARPED_NYLIUM: 4 # 诡异菌岩 - 下界特有，略高
-    #MYCELIUM: 8 # 菌丝 - 稀有群系特有，保持原价
-    #FARMLAND: 1 # 耕地 - 易得
-    CLAY: 4 # 粘土块 (4*粘土球, 球EMC=1) - 根据基础材料调整
-    SAND: 1 # 沙子 - 基础
-    RED_SAND: 1 # 红沙 - 基础
-    GRAVEL: 1 # 砂砾 - 基础
-    SOUL_SAND: 2 # 灵魂沙 - 下界特有
-    SOUL_SOIL: 2 # 灵魂土 - 下界特有
+    GRASS_BLOCK: 2 # 草方块
+    DIRT: 1 # 泥土
+    PODZOL: 2 # 灰化土
+    COARSE_DIRT: 1 # 砂土
+    ROOTED_DIRT: 2 # 缠根泥土
+    CRIMSON_NYLIUM: 4 # 绯红菌岩
+    WARPED_NYLIUM: 4 # 诡异菌岩 
+    #MYCELIUM: 8 # 菌丝
+    #FARMLAND: 1 # 耕地
+    CLAY: 4 # 粘土块 (4*粘土球, 球EMC=1)
+    SAND: 1 # 沙子
+    RED_SAND: 1 # 红沙
+    GRAVEL: 1 # 砂砾
+    SOUL_SAND: 2 # 灵魂沙
+    SOUL_SOIL: 2 # 灵魂土
     SNOW_BLOCK: 4 # 雪块 (4*雪球)
-    ICE: 1 # 冰 - 易农场化，大幅降低
-    PACKED_ICE: 4 # 浮冰 (获取需要精准采集)
+    ICE: 1 # 冰
+    PACKED_ICE: 4 # 浮冰 
     #BLUE_ICE: 36 # 蓝冰
     OBSIDIAN: 16 # 黑曜石
     CRYING_OBSIDIAN: 18 # 哭泣的黑曜石
 
     # ===== 石头类方块 =====
-    STONE: 1 # 石头 - 基础
-    COBBLESTONE: 1 # 圆石 - 基础
+    STONE: 1 # 石头
+    COBBLESTONE: 1 # 圆石
     mossy_cobblestone: 1.3 # 苔石 (圆石1 + 藤蔓~0.3)
-    BLACKSTONE: 2 # 黑石 - 下界特有
-    DEEPSLATE: 1 # 深板岩 - 基础
-    COBBLED_DEEPSLATE: 1 # 深板圆石 - 基础
-    TUFF: 1 # 凝灰岩 - 基础
-    CALCITE: 2 # 方解石 - 稀有度略高
-    GRANITE: 1 # 花岗岩 - 基础
-    DIORITE: 1 # 闪长岩 - 基础
-    ANDESITE: 1 # 安山岩 - 基础
-    DRIPSTONE_BLOCK: 2 # 滴水石块 - 洞穴更新，价值降低
-    NETHERRACK: 1 # 下界岩 - 基础
-    BASALT: 2 # 玄武岩 - 下界特有
-    SMOOTH_BASALT: 2 # 平滑玄武岩 - 烧制加工，与玄武岩价值一致
-    END_STONE: 4 # 末地石 - 末地特有
+    BLACKSTONE: 2 # 黑石
+    DEEPSLATE: 1 # 深板岩
+    COBBLED_DEEPSLATE: 1 # 深板圆石
+    TUFF: 1 # 凝灰岩
+    CALCITE: 2 # 方解石
+    GRANITE: 1 # 花岗岩
+    DIORITE: 1 # 闪长岩
+    ANDESITE: 1 # 安山岩
+    DRIPSTONE_BLOCK: 2 # 滴水石块
+    NETHERRACK: 1 # 下界岩
+    BASALT: 2 # 玄武岩
+    SMOOTH_BASALT: 2 # 平滑玄武岩
+    END_STONE: 4 # 末地石
     PRISMARINE: 4 # 海晶石
-    MAGMA_BLOCK: 4 # 岩浆块 (4*岩浆膏, 膏EMC=1)
-    MOSS_BLOCK: 2 # 苔藓块 - 可骨粉刷，防漏洞，价值降低
+    MAGMA_BLOCK: 4 # 岩浆块
+    MOSS_BLOCK: 2 # 苔藓块
 
     # ===== 加工石质方块 =====
-    SMOOTH_STONE: 1 # 平滑石头 - 烧制所得，成本=产出
-    POLISHED_GRANITE: 1 # 磨制花岗岩 - 合成成本=产出
-    POLISHED_DIORITE: 1 # 磨制闪长岩 - 合成成本=产出
-    POLISHED_ANDESITE: 1 # 磨制安山岩 - 合成成本=产出
-    POLISHED_DEEPSLATE: 1 # 磨制深板岩 - 合成成本=产出
-    POLISHED_BLACKSTONE: 2 # 磨制黑石 - 合成成本=产出
+    SMOOTH_STONE: 1 # 平滑石头
+    POLISHED_GRANITE: 1 # 磨制花岗岩
+    POLISHED_DIORITE: 1 # 磨制闪长岩
+    POLISHED_ANDESITE: 1 # 磨制安山岩
+    POLISHED_DEEPSLATE: 1 # 磨制深板岩
+    POLISHED_BLACKSTONE: 2 # 磨制黑石
 
-    STONE_BRICKS: 1 # 石砖 (4*石头 -> 4*石砖) - 修复刷EMC漏洞
+    STONE_BRICKS: 1 # 石砖 (4*石头 -> 4*石砖)
     MOSSY_STONE_BRICKS: 2 # 苔石砖 (石砖1+藤蔓1)
-    CRACKED_STONE_BRICKS: 1 # 裂纹石砖 - 烧制所得，与石砖一致
-    CHISELED_STONE_BRICKS: 1 # 錾制石砖 - 合成所得，与石砖一致
+    CRACKED_STONE_BRICKS: 1 # 裂纹石砖
+    CHISELED_STONE_BRICKS: 1 # 錾制石砖
     bricks: 1.5 #红砖块
-    DEEPSLATE_BRICKS: 1 # 深板岩砖 (4*深板圆石 -> 4*砖)
-    DEEPSLATE_TILES: 1 # 深板岩瓦 (4*深板圆石 -> 4*瓦)
-    NETHER_BRICKS: 1 # 下界砖 (4*下界岩 -> 4*下界炼砖)
-    RED_NETHER_BRICKS: 2 # 红色下界砖 (2*下界砖+2*下界疣)
-    CRACKED_NETHER_BRICKS: 1 # 裂纹下界砖 - 烧制所得，与下界砖一致
-    CHISELED_NETHER_BRICKS: 1 # 錾制下界砖 - 合成所得，与下界砖一致
+    DEEPSLATE_BRICKS: 1 # 深板岩砖
+    DEEPSLATE_TILES: 1 # 深板岩瓦
+    NETHER_BRICKS: 1 # 下界砖
+    RED_NETHER_BRICKS: 2 # 红色下界砖
+    CRACKED_NETHER_BRICKS: 1 # 裂纹下界砖
+    CHISELED_NETHER_BRICKS: 1 # 錾制下界砖
     chiseled_tuff_bricks: 1 #雕纹凝灰岩砖
-    MUD_BRICKS: 2 # 泥砖 (泥坯烧制, 泥坯=2)
+    MUD_BRICKS: 2 # 泥砖
     sandstone: 1.3 # 砂岩
     cut_sandstone: 1.5 # 切制砂岩
     chiseled_sandstone: 1.5 # 雕纹砂岩
@@ -76,20 +76,20 @@ EMC_VALUES:
     smooth_red_sandstone: 1.5 # 平滑红砂岩
     PRISMARINE_BRICKS: 9 # 海晶石砖
 
-    CHISELED_POLISHED_BLACKSTONE: 2 # 錾制磨制黑石 - 与磨制黑石同价
-    GILDED_BLACKSTONE: 16 # 镶金黑石 - 稀有，保持原价
-    QUARTZ_BLOCK: 32 # 石英块 (4*石英) - 保持原价
-    CHISELED_QUARTZ_BLOCK: 32 # 錾制石英块 - 保持原价
-    QUARTZ_BRICKS: 32 # 石英砖 - 保持原价
-    QUARTZ_PILLAR: 32 # 石英柱 - 保持原价
-    SMOOTH_QUARTZ: 32 # 平滑石英块 - 烧制所得，与石英块相同
-    PURPUR_BLOCK: 16 # 紫珀块 (4*爆裂紫颂果) - 末地特有，中等价值
-    PURPUR_PILLAR: 16 # 紫珀柱 - 与紫珀块相同
-    END_STONE_BRICKS: 4 # 末地石砖 (末地石烧制) - 与末地石价值一致
+    CHISELED_POLISHED_BLACKSTONE: 2 # 錾制磨制黑石
+    GILDED_BLACKSTONE: 16 # 镶金黑石 
+    QUARTZ_BLOCK: 32 # 石英块 (4*石英)
+    CHISELED_QUARTZ_BLOCK: 32 # 錾制石英块
+    QUARTZ_BRICKS: 32 # 石英砖
+    QUARTZ_PILLAR: 32 # 石英柱 
+    SMOOTH_QUARTZ: 32 # 平滑石英块 
+    PURPUR_BLOCK: 16 # 紫珀块 (4*爆裂紫颂果)
+    PURPUR_PILLAR: 16 # 紫珀柱
+    END_STONE_BRICKS: 4 # 末地石砖 (末地石烧制)
 
     # ===== 矿物块 =====
-    AMETHYST_BLOCK: 36 # 紫水晶块 (4*紫水晶碎片) - 防农场刷，大幅降低
-    #BUDDING_AMETHYST: 144 # 萌芽紫水晶 - 稀有，保持原价
+    AMETHYST_BLOCK: 36 # 紫水晶块 (4*紫水晶碎片)
+    #BUDDING_AMETHYST: 144 # 萌芽紫水晶
 
     # ===== 原木类 (所有原木、去皮原木、木头、去皮木头保持一致) =====
     OAK_LOG: 4 # 橡树原木
@@ -156,79 +156,79 @@ EMC_VALUES:
     DARK_OAK_LEAVES: 1 # 深色橡树树叶
     MANGROVE_LEAVES: 1 # 红树树叶
     CHERRY_LEAVES: 1 # 樱花树叶
-    AZALEA_LEAVES: 1 # 杜鹃树叶 - 统一为1
-    FLOWERING_AZALEA_LEAVES: 1 # 开花杜鹃树叶 - 统一为1
-    NETHER_WART_BLOCK: 1 # 下界疣块 (9*下界疣, 疣EMC≈0.11) - 大幅降低
+    AZALEA_LEAVES: 1 # 杜鹃树叶
+    FLOWERING_AZALEA_LEAVES: 1 # 开花杜鹃树叶
+    NETHER_WART_BLOCK: 1 # 下界疣块 (9*下界疣, 疣EMC≈0.11)
 
     # ===== 植物类 =====
-    #GRASS: 1 # 草 - 基础
-    #FERN: 1 # 蕨 - 基础
-    #DEAD_BUSH: 1 # 枯灌木 - 基础
-    #SEAGRASS: 1 # 海草 - 基础
-    #TALL_GRASS: 1 # 高草 - 基础
-    #LARGE_FERN: 1 # 大蕨 - 基础
-    #BROWN_MUSHROOM: 4 # 棕色蘑菇 - 保持原价
-    #RED_MUSHROOM: 4 # 红色蘑菇 - 保持原价
-    #CRIMSON_FUNGUS: 4 # 绯红真菌 - 保持原价
-    #WARPED_FUNGUS: 4 # 诡异真菌 - 保持原价
-    #CRIMSON_ROOTS: 2 # 绯红菌根 - 保持原价
-    #WARPED_ROOTS: 2 # 诡异菌根 - 保持原价
-    #WEEPING_VINES: 2 # 垂泪藤 - 保持原价
-    #TWISTING_VINES: 2 # 缠怨藤 - 保持原价
-    #SUGAR_CANE: 2 # 甘蔗 - 保持原价
-    #KELP: 1 # 海带 - 基础
-    #BAMBOO: 1 # 竹子 - 基础
-    #VINE: 2 # 藤蔓 - 保持原价
-    GLOW_LICHEN: 4 # 发光地衣 - 保持原价
+    #GRASS: 1 # 草
+    #FERN: 1 # 蕨
+    #DEAD_BUSH: 1 # 枯灌木
+    #SEAGRASS: 1 # 海草
+    #TALL_GRASS: 1 # 高草
+    #LARGE_FERN: 1 # 大蕨
+    #BROWN_MUSHROOM: 4 # 棕色蘑菇
+    #RED_MUSHROOM: 4 # 红色蘑菇
+    #CRIMSON_FUNGUS: 4 # 绯红真菌
+    #WARPED_FUNGUS: 4 # 诡异真菌
+    #CRIMSON_ROOTS: 2 # 绯红菌根
+    #WARPED_ROOTS: 2 # 诡异菌根
+    #WEEPING_VINES: 2 # 垂泪藤
+    #TWISTING_VINES: 2 # 缠怨藤
+    #SUGAR_CANE: 2 # 甘蔗
+    #KELP: 1 # 海带
+    #BAMBOO: 1 # 竹子
+    #VINE: 2 # 藤蔓
+    GLOW_LICHEN: 4 # 发光地衣
     MOSS_CARPET: 1 # 苔藓地毯 (苔藓块=2, 2*2/3≈1.33) - 取整数1
-    #HANGING_ROOTS: 1 # 垂根 - 基础
-    #BIG_DRIPLEAF: 4 # 大型垂滴叶 - 洞穴更新，保持原价
-    #SMALL_DRIPLEAF: 2 # 小型垂滴叶 - 洞穴更新，保持原价
-    #SCULK: 8 # 幽匿方块 - 深暗之域特有，价值略高
+    #HANGING_ROOTS: 1 # 垂根
+    #BIG_DRIPLEAF: 4 # 大型垂滴叶
+    #SMALL_DRIPLEAF: 2 # 小型垂滴叶
+    #SCULK: 8 # 幽匿方块
     LILY_PAD: 8 # 睡莲
-    SEA_PICKLE: 1 # 海泡菜 - 易收集，大幅降低
-    TUBE_CORAL: 2 # 管珊瑚 - 统一降价
-    BRAIN_CORAL: 2 # 脑珊瑚 - 统一降价
-    BUBBLE_CORAL: 2 # 气泡珊瑚 - 统一降价
-    FIRE_CORAL: 2 # 火珊瑚 - 统一降价
-    HORN_CORAL: 2 # 角珊瑚 - 统一降价
-    DEAD_TUBE_CORAL: 2 # 枯死管珊瑚 - 统一降价
-    DEAD_BRAIN_CORAL: 2 # 枯死脑珊瑚 - 统一降价
-    DEAD_BUBBLE_CORAL: 2 # 枯死气泡珊瑚 - 统一降价
-    DEAD_FIRE_CORAL: 2 # 枯死火珊瑚 - 统一降价
-    DEAD_HORN_CORAL: 2 # 枯死角珊瑚 - 统一降价
-    TUBE_CORAL_BLOCK: 2 # 管珊瑚块 - 统一降价
-    BRAIN_CORAL_BLOCK: 2 # 脑珊瑚块 - 统一降价
-    BUBBLE_CORAL_BLOCK: 2 # 气泡珊瑚块 - 统一降价
-    FIRE_CORAL_BLOCK: 2 # 火珊瑚块 - 统一降价
-    HORN_CORAL_BLOCK: 2 # 角珊瑚块 - 统一降价
-    DEAD_TUBE_CORAL_BLOCK: 2 # 枯死管珊瑚块 - 统一降价
-    DEAD_BRAIN_CORAL_BLOCK: 2 # 枯死脑珊瑚块 - 统一降价
-    DEAD_BUBBLE_CORAL_BLOCK: 2 # 枯死气泡珊瑚块 - 统一降价
-    DEAD_FIRE_CORAL_BLOCK: 2 # 枯死火珊瑚块 - 统一降价
-    DEAD_HORN_CORAL_BLOCK: 2 # 枯死角珊瑚块 - 统一降价
-    TUBE_CORAL_FAN: 2 # 管珊瑚扇 - 统一降价
-    BRAIN_CORAL_FAN: 2 # 脑珊瑚扇 - 统一降价
-    BUBBLE_CORAL_FAN: 2 # 气泡珊瑚扇 - 统一降价
-    FIRE_CORAL_FAN: 2 # 火珊瑚扇 - 统一降价
-    HORN_CORAL_FAN: 2 # 角珊瑚扇 - 统一降价
-    DEAD_TUBE_CORAL_FAN: 2 # 枯死管珊瑚扇 - 统一降价
-    DEAD_BRAIN_CORAL_FAN: 2 # 枯死脑珊瑚扇 - 统一降价
-    DEAD_BUBBLE_CORAL_FAN: 2 # 枯死气泡珊瑚扇 - 统一降价
-    DEAD_FIRE_CORAL_FAN: 2 # 枯死火珊瑚扇 - 统一降价
-    DEAD_HORN_CORAL_FAN: 2 # 枯死角珊瑚扇 - 统一降价
+    SEA_PICKLE: 1 # 海泡菜
+    TUBE_CORAL: 2 # 管珊瑚
+    BRAIN_CORAL: 2 # 脑珊瑚
+    BUBBLE_CORAL: 2 # 气泡珊瑚
+    FIRE_CORAL: 2 # 火珊瑚
+    HORN_CORAL: 2 # 角珊瑚
+    DEAD_TUBE_CORAL: 2 # 枯死管珊瑚
+    DEAD_BRAIN_CORAL: 2 # 枯死脑珊瑚
+    DEAD_BUBBLE_CORAL: 2 # 枯死气泡珊瑚
+    DEAD_FIRE_CORAL: 2 # 枯死火珊瑚
+    DEAD_HORN_CORAL: 2 # 枯死角珊瑚
+    TUBE_CORAL_BLOCK: 2 # 管珊瑚块
+    BRAIN_CORAL_BLOCK: 2 # 脑珊瑚块
+    BUBBLE_CORAL_BLOCK: 2 # 气泡珊瑚块
+    FIRE_CORAL_BLOCK: 2 # 火珊瑚块
+    HORN_CORAL_BLOCK: 2 # 角珊瑚块
+    DEAD_TUBE_CORAL_BLOCK: 2 # 枯死管珊瑚块
+    DEAD_BRAIN_CORAL_BLOCK: 2 # 枯死脑珊瑚块
+    DEAD_BUBBLE_CORAL_BLOCK: 2 # 枯死气泡珊瑚块
+    DEAD_FIRE_CORAL_BLOCK: 2 # 枯死火珊瑚块
+    DEAD_HORN_CORAL_BLOCK: 2 # 枯死角珊瑚块
+    TUBE_CORAL_FAN: 2 # 管珊瑚扇
+    BRAIN_CORAL_FAN: 2 # 脑珊瑚扇
+    BUBBLE_CORAL_FAN: 2 # 气泡珊瑚扇
+    FIRE_CORAL_FAN: 2 # 火珊瑚扇
+    HORN_CORAL_FAN: 2 # 角珊瑚扇
+    DEAD_TUBE_CORAL_FAN: 2 # 枯死管珊瑚扇
+    DEAD_BRAIN_CORAL_FAN: 2 # 枯死脑珊瑚扇
+    DEAD_BUBBLE_CORAL_FAN: 2 # 枯死气泡珊瑚扇
+    DEAD_FIRE_CORAL_FAN: 2 # 枯死火珊瑚扇
+    DEAD_HORN_CORAL_FAN: 2 # 枯死角珊瑚扇
 
     # ===== 光源方块 =====
     lantern: 8 #灯笼
     soul_lantern: 10 #灵魂灯笼
-    GLOWSTONE: 8 # 荧石 (4*荧石粉, 粉EMC=2) - 易获取，大幅降低
-    SEA_LANTERN: 16 # 海晶灯 - 易获取，大幅降低
-    SHROOMLIGHT: 2 # 菌光体 - 易获取，降低
-    OCHRE_FROGLIGHT: 16 # 赭黄蛙明灯 - 统一蛙明灯价格，大幅降低
-    VERDANT_FROGLIGHT: 16 # 翠绿蛙明灯 - 统一蛙明灯价格，大幅降低
-    PEARLESCENT_FROGLIGHT: 16 # 珠紫蛙明灯 - 统一蛙明灯价格，大幅降低
-    GLOW_BERRIES: 2 # 发光浆果 - 保持原价
-    #FROGSPAWN: 16 # 蛙卵 - 稀有，无获取方式
+    GLOWSTONE: 8 # 荧石 (4*荧石粉, 粉EMC=2)
+    SEA_LANTERN: 16 # 海晶灯
+    SHROOMLIGHT: 2 # 菌光体
+    OCHRE_FROGLIGHT: 16 # 赭黄蛙明灯
+    VERDANT_FROGLIGHT: 16 # 翠绿蛙明灯
+    PEARLESCENT_FROGLIGHT: 16 # 珠紫蛙明灯
+    GLOW_BERRIES: 2 # 发光浆果
+    #FROGSPAWN: 16 # 蛙卵 - 无获取方式
 
     # ===== 玻璃类 =====
     GLASS: 1.2 # 玻璃
@@ -254,43 +254,43 @@ EMC_VALUES:
     BLACK_STAINED_GLASS: 2
 
     # ===== 陶瓦类 =====
-    TERRACOTTA: 2 # 陶瓦 (粘土块烧制) - 按推荐值调整
+    TERRACOTTA: 2 # 陶瓦 (粘土块烧制)
 
     # ===== 染色陶瓦 =====
     WHITE_TERRACOTTA: 2 # 与基础陶瓦同价
-    ORANGE_TERRACOTTA: 2 # 与基础陶瓦同价
-    MAGENTA_TERRACOTTA: 2 # 与基础陶瓦同价
-    LIGHT_BLUE_TERRACOTTA: 2 # 与基础陶瓦同价
-    YELLOW_TERRACOTTA: 2 # 与基础陶瓦同价
-    LIME_TERRACOTTA: 2 # 与基础陶瓦同价
-    PINK_TERRACOTTA: 2 # 与基础陶瓦同价
-    GRAY_TERRACOTTA: 2 # 与基础陶瓦同价
-    LIGHT_GRAY_TERRACOTTA: 2 # 与基础陶瓦同价
-    CYAN_TERRACOTTA: 2 # 与基础陶瓦同价
-    PURPLE_TERRACOTTA: 2 # 与基础陶瓦同价
-    BLUE_TERRACOTTA: 2 # 与基础陶瓦同价
-    BROWN_TERRACOTTA: 2 # 与基础陶瓦同价
-    GREEN_TERRACOTTA: 2 # 与基础陶瓦同价
-    RED_TERRACOTTA: 2 # 与基础陶瓦同价
-    BLACK_TERRACOTTA: 2 # 与基础陶瓦同价
+    ORANGE_TERRACOTTA: 2
+    MAGENTA_TERRACOTTA: 2
+    LIGHT_BLUE_TERRACOTTA: 2
+    YELLOW_TERRACOTTA: 2
+    LIME_TERRACOTTA: 2
+    PINK_TERRACOTTA: 2
+    GRAY_TERRACOTTA: 2
+    LIGHT_GRAY_TERRACOTTA: 2
+    CYAN_TERRACOTTA: 2
+    PURPLE_TERRACOTTA: 2
+    BLUE_TERRACOTTA: 2
+    BROWN_TERRACOTTA: 2
+    GREEN_TERRACOTTA: 2
+    RED_TERRACOTTA: 2
+    BLACK_TERRACOTTA: 2
 
     # ===== 染色带釉陶瓦 =====
     WHITE_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    ORANGE_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    MAGENTA_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    LIGHT_BLUE_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    YELLOW_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    LIME_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    PINK_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    GRAY_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    LIGHT_GRAY_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    CYAN_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    PURPLE_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    BLUE_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    BROWN_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    GREEN_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    RED_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
-    BLACK_GLAZED_TERRACOTTA: 2 # 与基础带釉陶瓦同价
+    ORANGE_GLAZED_TERRACOTTA: 2
+    MAGENTA_GLAZED_TERRACOTTA: 2
+    LIGHT_BLUE_GLAZED_TERRACOTTA: 2
+    YELLOW_GLAZED_TERRACOTTA: 2
+    LIME_GLAZED_TERRACOTTA: 2
+    PINK_GLAZED_TERRACOTTA: 2
+    GRAY_GLAZED_TERRACOTTA: 2
+    LIGHT_GRAY_GLAZED_TERRACOTTA: 2
+    CYAN_GLAZED_TERRACOTTA: 2
+    PURPLE_GLAZED_TERRACOTTA: 2
+    BLUE_GLAZED_TERRACOTTA: 2
+    BROWN_GLAZED_TERRACOTTA: 2
+    GREEN_GLAZED_TERRACOTTA: 2
+    RED_GLAZED_TERRACOTTA: 2
+    BLACK_GLAZED_TERRACOTTA: 2
 
     # ===== 染色混凝土粉末 =====
     WHITE_CONCRETE_POWDER: 2
@@ -329,25 +329,25 @@ EMC_VALUES:
     BLACK_CONCRETE: 3
 
     # ===== 建筑装饰 =====
-    LADDER: 3 # 梯子 (7*木棍) - 保持原价
-    SCAFFOLDING: 1 # 脚手架 (6*竹子+线) - 保持原价
-    CHAIN: 12 # 锁链 (2*铁锭+铁粒) - 保持原价
-    IRON_BARS: 12 # 铁栏杆 (6*铁锭) - 保持原价
-    #ARMOR_STAND: 16 # 盔甲架 (6*木棍+石台阶) - 保持原价
-    BELL: 128 # 钟 (4*金锭+木棍) - 保持原价
-    BARREL: 8 # 木桶 (7*木板+2木棍) - 优秀的储存/装饰方块
-    CHEST: 8 # 箱子 (8*木板) - 基础储存/装饰方块
-    COMPOSTER: 8 # 堆肥桶 (7*木板) - 美观且有一定功能性
-    LECTERN: 16 # 讲台 (4*木板+书架) - 用于装饰
+    LADDER: 3 # 梯子 (7*木棍)
+    SCAFFOLDING: 1 # 脚手架 (6*竹子+线)
+    CHAIN: 12 # 锁链 (2*铁锭+铁粒)
+    IRON_BARS: 12 # 铁栏杆 (6*铁锭)
+    #ARMOR_STAND: 16 # 盔甲架 (6*木棍+石台阶)
+    BELL: 128 # 钟 (4*金锭+木棍)
+    BARREL: 8 # 木桶 (7*木板+2木棍)
+    CHEST: 8 # 箱子 (8*木板)
+    COMPOSTER: 8 # 堆肥桶 (7*木板)
+    LECTERN: 16 # 讲台 (4*木板+书架)
 
     # ===== 特殊方块 =====
     AMETHYST_CLUSTER: 36 # 紫水晶簇 - 与紫水晶块同价
-    POINTED_DRIPSTONE: 1 # 滴水石锥 - 基础
-    #REINFORCED_DEEPSLATE: 1024 # 强化深板岩 - 稀有且独特，保持高价
-    MUD: 2 # 泥巴 - 红树林群系，基础
-    PACKED_MUD: 2 # 泥土块 - 泥巴加工
-    CHISELED_BOOKSHELF: 16 # 雕纹书架 - 实用且美观
-    CALIBRATED_SCULK_SENSOR: 16 # 校准幽匿感测体 - 纹理独特，可作为装饰品
+    POINTED_DRIPSTONE: 1 # 滴水石锥
+    #REINFORCED_DEEPSLATE: 1024 # 强化深板岩 - 生存无法获取
+    MUD: 2 # 泥巴
+    PACKED_MUD: 2 # 泥土块
+    CHISELED_BOOKSHELF: 16 # 雕纹书架
+    CALIBRATED_SCULK_SENSOR: 16 # 校准幽匿感测体
 
     # ===== 衍生物 (台阶、楼梯、墙、门、活板门、围墙、围墙门) =====
     # 规则: 台阶 = 基础*0.5 | 楼梯 = 基础*1.5 | 墙 = 基础*1 | 木活板门 = 3 | 木栅栏门 = 4
@@ -478,15 +478,15 @@ EMC_VALUES:
     ANDESITE_WALL: 1              # 基础=1
     DEEPSLATE_TILE_WALL: 1
     DEEPSLATE_BRICK_WALL: 1
-    POLISHED_DEEPSLATE_WALL: 2    # 基础=2 (原1→修正)
+    POLISHED_DEEPSLATE_WALL: 2    # 基础=2
     COBBLED_DEEPSLATE_WALL: 1
     NETHER_BRICK_WALL: 1
     RED_NETHER_BRICK_WALL: 2
     PRISMARINE_WALL: 12
-    END_STONE_BRICK_WALL: 6       # 基础=6 (原4→修正)
+    END_STONE_BRICK_WALL: 6       # 基础=6
     MUD_BRICK_WALL: 2
-    POLISHED_BLACKSTONE_BRICK_WALL: 4  # 基础=4 (原2→修正)
+    POLISHED_BLACKSTONE_BRICK_WALL: 4  # 基础=4
     SANDSTONE_WALL: 1.3
     RED_SANDSTONE_WALL: 1.5
     BLACKSTONE_WALL: 2
-    POLISHED_BLACKSTONE_WALL: 4   # 基础=4 (原2→修正)
+    POLISHED_BLACKSTONE_WALL: 4   # 基础=4

@@ -1,0 +1,50 @@
+# 等价交换插件 - 消息配置文件
+# 支持 MiniMessage 格式: https://docs.advntr.dev/minimessage/format.html
+#
+# 变量支持
+# %amount% - 获得的金额
+# %price% - 需要的金额
+# %currency% - 货币名
+# %item% - 物品ID
+
+
+# 转换菜单消息
+convert-menu:
+  title: "<gradient:#FFAA00:#39C5BB>等价交换</gradient> - <color:#55AAFF><bold>物品转换</bold></color>"
+  convert-button-name: "<color:#55FFFF><bold>放入物品进行转换</bold></color>"
+  items-restored: "<gradient:#FFAA00:#55AAFF>已恢复您上次在物品转换菜单中的物品</gradient>"
+  items-returned: "<gradient:#FF5555:#FFAA00>由于您上次非正常退出，物品转换菜单中的物品已退还至您的背包和脚下</gradient>"
+  no-items: "<gradient:#FFAA00:#FF5555>没发现任何物品呢？？</gradient>"
+  no-convertible-items: "<gradient:#FFAA00:#FF5555>好像没有可转换的物品哦~</gradient>"
+  conversion-success: "<gradient:#FFAA00:#55FF55>转换物品获得了 %amount% %currency%</gradient>"
+  unlocked-items: "<color:#55FF55>解锁了新物品: </color>"
+  skipped-items: "<color:#FFAA00><italic>已自动跳过背包中无法转换的物品。</italic></color>"
+  some-items-returned: "<color:#FFAA00><italic>部分无法转换的物品已退还。</italic></color>"
+  items-dropped: "<gradient:#FF5555:#FFAA00>部分无法转换的物品因背包已满已掉落在地</gradient>"
+  error-occurred: "<gradient:#FF5555:#FFAA00>转换过程出错，物品已保存</gradient>"
+  menu-saved: "<gradient:#FFAA00:#FF5555>菜单异常关闭，物品已保存</gradient>"
+  backpack-sold: "<color:#55FF55>出售背包物品获得 </color><color:#FFFF55><bold>%amount%</bold></color><color:#55FF55> %currency%</color>"
+  no-backpack-items: "<color:#FF5555>背包中没有可出售的基础物品！</color>"
+
+# 预览菜单消息
+preview-menu:
+  title: "<color:#9B5DE5>物</color><color:#8A5DE5>品</color><color:#7A5DE5>预</color><color:#6A5DE5>览</color> | 第 %page%/%total% 页"
+  unlocked: "<color:#9EE6A0>已解锁</color>"
+  locked: "<color:#FF6B6B>未解锁</color>"
+  unlock-hint: "<color:#9EE6CF>通过转换来解锁物品</color>"
+
+# 购买菜单消息
+purchase-menu:
+  title: "<color:#39C5BB>等价</color><color:#36B9C5>交</color><color:#32ADC0>换</color><color:#2EA2BA> 商</color><color:#2A96B5>店</color> | 第 %page%/%total% 页"
+  insufficient-funds: "<color:#FF6B6B>余额不足! 需要 </color><color:#FFB347>%price% %currency%</color>"
+  invalid-item: "<color:#FF6B6B>无效的物品ID: %item%</color>"
+  inventory-full: "<color:#FF6B6B>背包空间不足!</color>"
+  purchase-success: "<color:#9EE6A0>成功购买 </color><color:#39C5BB>%item%</color><color:#FFB347> × %amount%</color><color:#9EE6A0> 花费 </color><color:#FFB347>%price% %currency%</color>\n<color:#D3D3D3>(基础价值: %base_value% + 重构损耗: %loss%)</color>"
+
+# 通用消息
+currency:
+  name: "硬币"
+general:
+  data-loading: "<color:#FFD166>正在加载您的数据，请稍候...</color>"
+  comma-separator: ", "
+  and-separator: " 和 "
