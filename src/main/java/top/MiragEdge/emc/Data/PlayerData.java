@@ -9,11 +9,13 @@ import java.util.HashSet;
 public class PlayerData {
     private final UUID playerId;
     private final Set<String> unlockedItems;
+    private double emcBalance;
 
     public PlayerData(UUID playerId) {
         this.playerId = playerId;
         // 使用线程安全的并发集合
         this.unlockedItems = ConcurrentHashMap.newKeySet();
+        this.emcBalance = 0.0;
     }
 
     public UUID getPlayerId() {
@@ -36,7 +38,7 @@ public class PlayerData {
     }
 
     /**
-     * 批量设置解锁物品（完整替换）
+     * 批量设置解锁物品
      * @param unlockedItems 新的解锁物品集合
      */
     public void setUnlockedItems(Set<String> unlockedItems) {
@@ -44,4 +46,15 @@ public class PlayerData {
         this.unlockedItems.addAll(unlockedItems);
     }
 
+
+    /**
+     * EMC余额相关方法
+     */
+    public double getEmcBalance() {
+        return emcBalance;
+    }
+
+    public void setEmcBalance(double emcBalance) {
+        this.emcBalance = emcBalance;
+    }
 }

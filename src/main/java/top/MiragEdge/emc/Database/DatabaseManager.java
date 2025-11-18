@@ -249,15 +249,16 @@ public class DatabaseManager {
     private void savePlayerDataInternal(Connection conn, PlayerData playerData) throws SQLException {
         UUID playerId = playerData.getPlayerId();
         Set<String> unlockedItems = playerData.getUnlockedItems();
+        double emcBalance = playerData.getEmcBalance();
 
-        // 先删除旧数据
-        String deleteSql = "DELETE FROM player_unlocks WHERE player_uuid = ?";
-        try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql)) {
+        // 先删除旧解锁数据
+        String deleteUnlocksSql = "DELETE FROM player_unlocks WHERE player_uuid = ?";
+        try (PreparedStatement deleteStmt = conn.prepareStatement(deleteUnlocksSql)) {
             deleteStmt.setString(1, playerId.toString());
             deleteStmt.executeUpdate();
         }
 
-        // 插入新数据
+        // 插入新解锁数据
         if (!unlockedItems.isEmpty()) {
             // SQLite和MySQL的INSERT语句不同
             String insertSql;
@@ -277,13 +278,32 @@ public class DatabaseManager {
                 insertStmt.executeBatch();
             }
         }
+
+        // 保存EMC余额
+        String balanceSql;
+        if (connector.isSQLite()) {
+            balanceSql = "INSERT OR REPLACE INTO player_emc_balance (player_uuid, balance, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)";
+        } else {
+            balanceSql = "INSERT INTO player_emc_balance (player_uuid, balance) VALUES (?, ?) " +
+                    "ON DUPLICATE KEY UPDATE balance = ?, updated_at = CURRENT_TIMESTAMP";
+        }
+
+        try (PreparedStatement balanceStmt = conn.prepareStatement(balanceSql)) {
+            balanceStmt.setString(1, playerId.toString());
+            balanceStmt.setDouble(2, emcBalance);
+            if (!connector.isSQLite()) {
+                balanceStmt.setDouble(3, emcBalance);
+            }
+            balanceStmt.executeUpdate();
+        }
     }
 
     private PlayerData loadPlayerDataInternal(Connection conn, UUID playerId) throws SQLException {
         PlayerData playerData = new PlayerData(playerId);
-        String sql = "SELECT item_id FROM player_unlocks WHERE player_uuid = ?";
 
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        // 加载解锁物品
+        String unlocksSql = "SELECT item_id FROM player_unlocks WHERE player_uuid = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(unlocksSql)) {
             stmt.setString(1, playerId.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -291,6 +311,21 @@ public class DatabaseManager {
                 }
             }
         }
+
+        // 加载EMC余额
+        String balanceSql = "SELECT balance FROM player_emc_balance WHERE player_uuid = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(balanceSql)) {
+            stmt.setString(1, playerId.toString());
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    playerData.setEmcBalance(rs.getDouble("balance"));
+                } else {
+                    // 如果没有记录，设置默认余额为0
+                    playerData.setEmcBalance(0.0);
+                }
+            }
+        }
+
         return playerData;
     }
 
@@ -342,9 +377,10 @@ public class DatabaseManager {
 
     // 创建表的方法 - 适配SQLite和MySQL
     private void createTables() {
-        String sql;
+        // 创建解锁物品表
+        String unlocksTableSql;
         if (connector.isSQLite()) {
-            sql = "CREATE TABLE IF NOT EXISTS player_unlocks (" +
+            unlocksTableSql = "CREATE TABLE IF NOT EXISTS player_unlocks (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                     "player_uuid TEXT NOT NULL," +
                     "item_id TEXT NOT NULL," +
@@ -352,7 +388,7 @@ public class DatabaseManager {
                     "UNIQUE(player_uuid, item_id)" +
                     ")";
         } else {
-            sql = "CREATE TABLE IF NOT EXISTS player_unlocks (" +
+            unlocksTableSql = "CREATE TABLE IF NOT EXISTS player_unlocks (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "player_uuid VARCHAR(36) NOT NULL," +
                     "item_id VARCHAR(64) NOT NULL," +
@@ -361,9 +397,33 @@ public class DatabaseManager {
                     ")";
         }
 
-        try (Connection conn = connector.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.execute();
+        // 创建EMC余额表
+        String balanceTableSql;
+        if (connector.isSQLite()) {
+            balanceTableSql = "CREATE TABLE IF NOT EXISTS player_emc_balance (" +
+                    "player_uuid TEXT PRIMARY KEY," +
+                    "balance REAL NOT NULL DEFAULT 0," +
+                    "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")";
+        } else {
+            balanceTableSql = "CREATE TABLE IF NOT EXISTS player_emc_balance (" +
+                    "player_uuid VARCHAR(36) PRIMARY KEY," +
+                    "balance DOUBLE NOT NULL DEFAULT 0," +
+                    "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
+                    ")";
+        }
+
+        try (Connection conn = connector.getConnection()) {
+            // 创建解锁物品表
+            try (PreparedStatement stmt = conn.prepareStatement(unlocksTableSql)) {
+                stmt.execute();
+            }
+
+            // 创建EMC余额表
+            try (PreparedStatement stmt = conn.prepareStatement(balanceTableSql)) {
+                stmt.execute();
+            }
+
             logger.info("数据库表创建/检查完成 - 使用" + (connector.isSQLite() ? "SQLite" : "MySQL"));
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "创建数据库表失败", e);

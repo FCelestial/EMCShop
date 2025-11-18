@@ -342,26 +342,37 @@ public class ConvertMenu implements InventoryHolder, Listener {
         return total;
     }
 
-    // 修复：确保经济操作在主线程执行
+    /**
+     * 带重试机制的存款方法（兼容现有代码）
+     * @param player 玩家对象
+     * @param amount 存款金额
+     */
     private void depositWithRetry(Player player, double amount) {
         if (amount <= 0) return;
-
-        Economy econ = EMCShop.getEconomy();
-        if (econ == null) return;
+        if (player == null) return;
 
         // 确保在主线程执行经济操作
         Bukkit.getScheduler().runTask(plugin, () -> {
             int retries = 0;
             while (retries < 3) {
                 try {
-                    econ.depositPlayer(player, amount);
-                    return;
+                    // 使用EMCManager的统一存款方法
+                    boolean success = emcManager.deposit(player, amount);
+                    if (success) {
+                        return; // 存款成功
+                    } else {
+                        plugin.getLogger().warning("存款操作返回失败，重试中... (" + (retries + 1) + "/3)");
+                    }
                 } catch (Exception e) {
-                    retries++;
-                    plugin.getLogger().warning("经济操作失败，重试中... (" + retries + "/3)");
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException ignored) {}
+                    plugin.getLogger().warning("存款操作异常: " + e.getMessage() + "，重试中... (" + (retries + 1) + "/3)");
+                }
+
+                retries++;
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                    break;
                 }
             }
             plugin.getLogger().warning("无法完成经济操作: " + player.getName() + " - " + amount);

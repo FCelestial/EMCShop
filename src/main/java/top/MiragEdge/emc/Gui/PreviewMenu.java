@@ -183,6 +183,8 @@ public class PreviewMenu implements Listener, InventoryHolder {
         String lossPercentage = percentageFormat.format(deconstructionFactor);
         String currencyName = MessageUtil.getInstance().getCurrencyName();
 
+        double balance = emcManager.getBalance(player);
+
         List<Component> lore = new ArrayList<>();
         lore.add(Component.text("已解锁的物品会显示附魔光效", ACCENT_COLOR));
         lore.add(Component.text("转换价值: 出售时获得的" + currencyName + "值", SECONDARY_COLOR));
@@ -190,6 +192,8 @@ public class PreviewMenu implements Listener, InventoryHolder {
                 .append(Component.text(lossPercentage, HIGHLIGHT_COLOR)));
         lore.add(Component.text("总计物品: ", NEUTRAL_COLOR)
                 .append(Component.text(totalItems + "个", HIGHLIGHT_COLOR)));
+        lore.add(Component.text("余额: ", NEUTRAL_COLOR)
+                .append(Component.text(priceFormat.format(balance) + " " + currencyName, SUCCESS_COLOR)));
 
         meta.lore(lore);
         item.setItemMeta(meta);

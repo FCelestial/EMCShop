@@ -7,6 +7,7 @@ import top.MiragEdge.emc.EMCShop;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.Bukkit;
 
 import java.io.File;
 import java.util.*;
@@ -19,10 +20,48 @@ public class EMCManager {
     private final Map<String, Double> emcValues = new LinkedHashMap<>();
     private final Map<UUID, PlayerData> playerDataMap = new ConcurrentHashMap<>();
 
+    // 经济模式枚举
+    public enum EconomyMode {
+        VAULT,  // 使用Vault经济系统
+        EMC     // 使用插件独立经济系统
+    }
+
+    private EconomyMode currentEconomyMode;
+
     public EMCManager(EMCShop plugin, DatabaseManager dbManager) {
         this.plugin = plugin;
         this.dbManager = dbManager;
         loadEMCValues();
+        setupEconomyMode();
+    }
+
+    /**
+     * 设置经济模式
+     */
+    public void setupEconomyMode() {
+        String mode = plugin.getConfig().getString("economy.mode", "EMC").toUpperCase();
+        try {
+            currentEconomyMode = EconomyMode.valueOf(mode);
+            plugin.getLogger().info("已启用经济模式: " + currentEconomyMode);
+        } catch (IllegalArgumentException e) {
+            currentEconomyMode = EconomyMode.EMC;
+            plugin.getLogger().warning("未知的经济模式: " + mode + ", 默认使用EMC模式");
+        }
+    }
+
+    /**
+     * 获取当前经济模式
+     */
+    public EconomyMode getCurrentEconomyMode() {
+        return currentEconomyMode;
+    }
+
+    /**
+     * 强制设置经济模式（供重载失败时回退使用）
+     */
+    public void setCurrentEconomyMode(EconomyMode mode) {
+        this.currentEconomyMode = mode;
+        plugin.getLogger().info("经济模式已强制设置为: " + mode);
     }
 
     // 加载物品EMC值（添加异常处理）
@@ -118,6 +157,12 @@ public class EMCManager {
                 playerDataMap.put(playerId, playerData);
                 // 登录时清理无效解锁记录
                 cleanInvalidUnlocks(playerId);
+
+                // 初始化EMC余额（如果使用EMC模式且玩家数据中没有余额记录）
+                if (currentEconomyMode == EconomyMode.EMC && playerData.getEmcBalance() < 0) {
+                    playerData.setEmcBalance(0.0);
+                    plugin.getLogger().info("初始化玩家 " + player.getName() + " 的EMC余额: 0.0");
+                }
             }
         });
     }
@@ -129,6 +174,7 @@ public class EMCManager {
 
         if (playerData != null) {
             dbManager.savePlayerDataAsync(playerData);
+            plugin.getLogger().info("已保存玩家 " + player.getName() + " 的数据");
         }
     }
 
@@ -147,6 +193,7 @@ public class EMCManager {
                 playerData.unlockItem(itemId);
                 // 异步保存到数据库
                 dbManager.savePlayerDataAsync(playerData);
+                plugin.getLogger().info("玩家 " + player.getName() + " 解锁了物品: " + itemId);
                 return true;
             }
         }
@@ -169,5 +216,246 @@ public class EMCManager {
             return null;
         }
         return playerDataMap.get(playerId);
+    }
+
+    // ========== 经济系统相关方法 ==========
+
+    /**
+     * 获取玩家余额
+     * @param player 玩家对象
+     * @return 玩家余额
+     */
+    public double getBalance(Player player) {
+        if (player == null) return 0;
+
+        switch (currentEconomyMode) {
+            case EMC:
+                // 使用插件独立经济系统
+                PlayerData playerData = playerDataMap.get(player.getUniqueId());
+                if (playerData != null) {
+                    double balance = playerData.getEmcBalance();
+                    plugin.getLogger().fine("获取玩家 " + player.getName() + " 的EMC余额: " + balance);
+                    return balance;
+                }
+                return 0;
+
+            case VAULT:
+            default:
+                // 使用Vault经济系统
+                try {
+                    double balance = EMCShop.getEconomy().getBalance(player);
+                    plugin.getLogger().fine("获取玩家 " + player.getName() + " 的Vault余额: " + balance);
+                    return balance;
+                } catch (Exception e) {
+                    plugin.getLogger().warning("获取Vault经济余额失败: " + e.getMessage());
+                    return 0;
+                }
+        }
+    }
+
+    /**
+     * 从玩家账户扣款（购买物品）
+     * @param player 玩家对象
+     * @param amount 扣款金额
+     * @return 是否扣款成功
+     */
+    public boolean withdraw(Player player, double amount) {
+        if (player == null || amount <= 0) return false;
+
+        switch (currentEconomyMode) {
+            case EMC:
+                // 使用插件独立经济系统
+                PlayerData playerData = playerDataMap.get(player.getUniqueId());
+                if (playerData != null) {
+                    double currentBalance = playerData.getEmcBalance();
+                    if (currentBalance >= amount) {
+                        playerData.setEmcBalance(currentBalance - amount);
+                        // 异步保存到数据库
+                        dbManager.savePlayerDataAsync(playerData);
+                        plugin.getLogger().info("从玩家 " + player.getName() + " 扣款: " + amount + " EMC，剩余余额: " + playerData.getEmcBalance());
+                        return true;
+                    } else {
+                        plugin.getLogger().info("玩家 " + player.getName() + " 余额不足，当前余额: " + currentBalance + "，需要: " + amount);
+                    }
+                }
+                return false;
+
+            case VAULT:
+            default:
+                // 使用Vault经济系统
+                try {
+                    boolean success = EMCShop.getEconomy().withdrawPlayer(player, amount).transactionSuccess();
+                    if (success) {
+                        plugin.getLogger().info("从玩家 " + player.getName() + " 扣款: " + amount + " 货币");
+                    } else {
+                        plugin.getLogger().warning("Vault经济扣款失败: " + player.getName() + " - " + amount);
+                    }
+                    return success;
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Vault经济扣款异常: " + e.getMessage());
+                    return false;
+                }
+        }
+    }
+
+    /**
+     * 向玩家账户存款（出售物品）
+     * @param player 玩家对象
+     * @param amount 存款金额
+     * @return 是否存款成功
+     */
+    public boolean deposit(Player player, double amount) {
+        if (player == null || amount <= 0) return false;
+
+        switch (currentEconomyMode) {
+            case EMC:
+                // 使用插件独立经济系统
+                PlayerData playerData = playerDataMap.get(player.getUniqueId());
+                if (playerData != null) {
+                    double currentBalance = playerData.getEmcBalance();
+                    playerData.setEmcBalance(currentBalance + amount);
+                    // 异步保存到数据库
+                    dbManager.savePlayerDataAsync(playerData);
+                    plugin.getLogger().info("向玩家 " + player.getName() + " 存款: " + amount + " EMC，当前余额: " + playerData.getEmcBalance());
+                    return true;
+                }
+                return false;
+
+            case VAULT:
+            default:
+                // 使用Vault经济系统
+                try {
+                    EMCShop.getEconomy().depositPlayer(player, amount);
+                    plugin.getLogger().info("向玩家 " + player.getName() + " 存款: " + amount + " 货币");
+                    return true;
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Vault经济存款失败: " + e.getMessage());
+                    return false;
+                }
+        }
+    }
+
+    /**
+     * 带重试机制的存款方法（兼容现有代码）
+     * @param player 玩家对象
+     * @param amount 存款金额
+     */
+    public void depositWithRetry(Player player, double amount) {
+        if (amount <= 0) return;
+
+        // 确保在主线程执行经济操作
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            int retries = 0;
+            while (retries < 3) {
+                try {
+                    if (deposit(player, amount)) {
+                        return; // 存款成功
+                    } else {
+                        plugin.getLogger().warning("存款操作返回失败，重试中... (" + (retries + 1) + "/3)");
+                    }
+                } catch (Exception e) {
+                    plugin.getLogger().warning("存款操作异常: " + e.getMessage() + "，重试中... (" + (retries + 1) + "/3)");
+                }
+
+                retries++;
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            plugin.getLogger().warning("无法完成经济操作: " + player.getName() + " - " + amount);
+        });
+    }
+
+    /**
+     * 设置玩家EMC余额（仅EMC模式有效）
+     * @param player 玩家对象
+     * @param amount 余额数量
+     * @return 是否设置成功
+     */
+    public boolean setBalance(Player player, double amount) {
+        if (player == null || amount < 0) return false;
+
+        if (currentEconomyMode == EconomyMode.EMC) {
+            PlayerData playerData = playerDataMap.get(player.getUniqueId());
+            if (playerData != null) {
+                playerData.setEmcBalance(amount);
+                // 异步保存到数据库
+                dbManager.savePlayerDataAsync(playerData);
+                plugin.getLogger().info("设置玩家 " + player.getName() + " 的EMC余额为: " + amount);
+                return true;
+            }
+        } else {
+            plugin.getLogger().warning("只能在EMC经济模式下设置玩家余额");
+        }
+        return false;
+    }
+
+    /**
+     * 检查玩家是否有足够余额
+     * @param player 玩家对象
+     * @param amount 检查金额
+     * @return 是否有足够余额
+     */
+    public boolean hasEnoughBalance(Player player, double amount) {
+        double balance = getBalance(player);
+        boolean hasEnough = balance >= amount;
+
+        if (!hasEnough) {
+            plugin.getLogger().fine("玩家 " + player.getName() + " 余额不足，当前余额: " + balance + "，需要: " + amount);
+        }
+
+        return hasEnough;
+    }
+
+    /**
+     * 给玩家发放EMC货币（仅EMC模式有效）
+     * @param player 玩家对象
+     * @param amount 发放金额
+     * @return 是否发放成功
+     */
+    public boolean giveEMC(Player player, double amount) {
+        return deposit(player, amount);
+    }
+
+    /**
+     * 从玩家扣除EMC货币（仅EMC模式有效）
+     * @param player 玩家对象
+     * @param amount 扣除金额
+     * @return 是否扣除成功
+     */
+    public boolean takeEMC(Player player, double amount) {
+        return withdraw(player, amount);
+    }
+
+    /**
+     * 重置玩家EMC余额为0（仅EMC模式有效）
+     * @param player 玩家对象
+     * @return 是否重置成功
+     */
+    public boolean resetBalance(Player player) {
+        return setBalance(player, 0.0);
+    }
+
+    /**
+     * 获取所有在线玩家的数据快照（用于调试和管理）
+     * @return 玩家数据快照映射
+     */
+    public Map<UUID, PlayerData> getOnlinePlayerDataSnapshot() {
+        return new HashMap<>(playerDataMap);
+    }
+
+    /**
+     * 强制保存所有在线玩家数据（用于紧急保存）
+     */
+    public void saveAllOnlinePlayerData() {
+        int count = 0;
+        for (PlayerData playerData : playerDataMap.values()) {
+            dbManager.savePlayerDataAsync(playerData);
+            count++;
+        }
+        plugin.getLogger().info("已强制保存 " + count + " 名在线玩家的数据");
     }
 }

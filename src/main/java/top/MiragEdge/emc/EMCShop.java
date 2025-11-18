@@ -48,15 +48,22 @@ public class EMCShop extends JavaPlugin implements Listener {
         dbConnector = new DatabaseConnector(this);
         dbManager = new DatabaseManager(dbConnector, this);
 
-        // 初始化Vault经济
-        if (!setupEconomy()) {
-            getLogger().severe("没有发现 Vault 经济插件前置! 关闭插件...");
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        }
-
         // 初始化管理器
         emcManager = new EMCManager(this, dbManager);
+
+        // 根据经济模式决定是否初始化Vault
+        EMCManager.EconomyMode economyMode = emcManager.getCurrentEconomyMode();
+        if (economyMode == EMCManager.EconomyMode.VAULT) {
+            // 只在VAULT模式下初始化Vault经济
+            if (!setupEconomy()) {
+                getLogger().severe("没有发现 Vault 经济插件前置! 关闭插件...");
+                getServer().getPluginManager().disablePlugin(this);
+                return;
+            }
+            getLogger().info("已启用Vault经济模式");
+        } else {
+            getLogger().info("已启用EMC独立经济模式");
+        }
 
         // 注册事件监听器
         getServer().getPluginManager().registerEvents(this, this);
@@ -119,16 +126,15 @@ public class EMCShop extends JavaPlugin implements Listener {
             return false;
         }
         economy = rsp.getProvider();
-        return true;
+        return economy != null;
     }
 
-    // 玩家登录事件 - 加载玩家解锁数据
+    // 玩家登录事件 - 加载玩家数据
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        emcManager.onPlayerLogin(event.getPlayer());
         Player player = event.getPlayer();
 
-        // 加载玩家解锁数据
+        // 加载玩家数据
         if (emcManager != null) {
             emcManager.onPlayerLogin(player);
         }
@@ -139,10 +145,12 @@ public class EMCShop extends JavaPlugin implements Listener {
         }
     }
 
-    // 玩家退出事件 - 保存玩家解锁数据
+    // 玩家退出事件 - 保存玩家数据
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        emcManager.onPlayerLogout(event.getPlayer());
+        if (emcManager != null) {
+            emcManager.onPlayerLogout(event.getPlayer());
+        }
     }
 
     /**
@@ -165,6 +173,21 @@ public class EMCShop extends JavaPlugin implements Listener {
         if (emcManager != null) {
             emcManager.loadEMCValues(); // 重新加载物品配置
 
+            // 重新设置经济模式（可能在配置中更改了）
+            String oldMode = emcManager.getCurrentEconomyMode().name();
+            emcManager.setupEconomyMode();
+            String newMode = emcManager.getCurrentEconomyMode().name();
+
+            if (!oldMode.equals(newMode)) {
+                getLogger().info("经济模式已从 " + oldMode + " 切换到 " + newMode);
+
+                // 如果切换到VAULT模式，需要检查Vault是否可用
+                if (emcManager.getCurrentEconomyMode() == EMCManager.EconomyMode.VAULT && !setupEconomy()) {
+                    getLogger().warning("切换到VAULT模式失败，未找到Vault经济插件！将保持使用EMC模式");
+                    emcManager.setCurrentEconomyMode(EMCManager.EconomyMode.EMC);
+                }
+            }
+
             // 清理所有在线玩家的无效解锁记录
             for (UUID playerId : onlinePlayers) {
                 emcManager.cleanInvalidUnlocks(playerId);
@@ -174,11 +197,42 @@ public class EMCShop extends JavaPlugin implements Listener {
         getLogger().info("配置和消息文件已重载，自动清理了 " + onlinePlayers.size() + " 名玩家的无效解锁记录。");
     }
 
+    /**
+     * 获取EMC管理器
+     */
     public EMCManager getEmcManager() {
         return emcManager;
     }
 
+    /**
+     * 获取Vault经济实例
+     * 注意：在EMC模式下可能返回null
+     */
     public static Economy getEconomy() {
         return economy;
+    }
+
+    /**
+     * 获取插件实例
+     */
+    public static EMCShop getInstance() {
+        return instance;
+    }
+
+    /**
+     * 检查是否使用Vault经济
+     */
+    public boolean isUsingVaultEconomy() {
+        return emcManager != null &&
+                emcManager.getCurrentEconomyMode() == EMCManager.EconomyMode.VAULT &&
+                economy != null;
+    }
+
+    /**
+     * 检查是否使用EMC独立经济
+     */
+    public boolean isUsingEMCEconomy() {
+        return emcManager != null &&
+                emcManager.getCurrentEconomyMode() == EMCManager.EconomyMode.EMC;
     }
 }

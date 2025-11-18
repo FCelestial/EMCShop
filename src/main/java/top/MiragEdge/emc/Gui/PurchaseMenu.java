@@ -197,7 +197,7 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         lore.add(Component.text("已解锁: ", NEUTRAL_COLOR)
                 .append(Component.text(unlockedCount + "/" + totalItems, SECONDARY_COLOR)));
 
-        double balance = EMCShop.getEconomy().getBalance(player);
+        double balance = emcManager.getBalance(player);
         lore.add(Component.text("余额: ", NEUTRAL_COLOR)
                 .append(Component.text(priceFormat.format(balance) + " " + currencyName, SUCCESS_COLOR)));
 
@@ -392,12 +392,12 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         return unlockedItems;
     }
 
-    // 购买物品（应用重构损耗）
+    // 购买物品（添加重构损耗）
     private void purchaseItem(Player player, String itemId, int amount) {
         double baseValue = emcManager.getItemValue(itemId);
         double actualPricePerItem = baseValue * (1 + reconstructionLoss);
         double totalPrice = actualPricePerItem * amount;
-        double balance = EMCShop.getEconomy().getBalance(player);
+        double balance = emcManager.getBalance(player);
 
         // 余额不足
         if (balance < totalPrice) {
@@ -431,7 +431,7 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         }
 
         // 购买成功流程
-        EMCShop.getEconomy().withdrawPlayer(player, totalPrice);
+        emcManager.withdraw(player, totalPrice);
         Component itemName = LocalizationUtil.getLocalizedName(material);
         String currencyName = MessageUtil.getInstance().getCurrencyName();
 

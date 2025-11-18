@@ -1,5 +1,5 @@
 name: EMCShop
-version: '3.9'
+version: '3.12'
 main: top.MiragEdge.emc.EMCShop
 api-version: '1.21'
 prefix: EMCShop
@@ -7,8 +7,8 @@ authors: [ FwindEmi ]
 description: EMC Shop Plugin for MirageEdge Network
 website: miragedge.top
 
-depend: [Vault]
-softdepend: [PlaceholderAPI]
+depend: []
+softdepend: [PlaceholderAPI,Vault]
 
 commands:
   emcshop:

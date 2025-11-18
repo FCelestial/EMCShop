@@ -43,7 +43,7 @@ purchase-menu:
 
 # 通用消息
 currency:
-  name: "硬币"
+  name: "EMC"
 general:
   data-loading: "<color:#FFD166>正在加载您的数据，请稍候...</color>"
   comma-separator: ", "
