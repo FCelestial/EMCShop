@@ -1,11 +1,11 @@
 name: EMCShop
-version: '3.12'
+version: '3.14'
 main: top.MiragEdge.emc.EMCShop
 api-version: '1.21'
 prefix: EMCShop
-authors: [ FwindEmi ]
-description: EMC Shop Plugin for MirageEdge Network
-website: miragedge.top
+authors: [ F.windEmiko^狐风轩汐 ]
+description: EMC Shop Plugin for MirageEdge Network | 锐界幻境·狐风轩汐
+website: F.windEmiko.top
 
 depend: []
 softdepend: [PlaceholderAPI,Vault]

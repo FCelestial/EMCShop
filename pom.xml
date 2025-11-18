@@ -4,13 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>top.MiragEdge</groupId>
+    <groupId>top.windEmiko.F</groupId>
     <artifactId>EMCShop</artifactId>
-    <version>3.12</version>
+    <version>3.14</version>
     <packaging>jar</packaging>
 
     <name>EMCShop</name>
-    <description>Minecraft plugin with MiragEdge NetWork</description>
+    <description>Minecraft plugin with MiragEdge NetWork | 锐界幻境·狐风轩汐</description>
 
     <properties>
         <java.version>21</java.version>
