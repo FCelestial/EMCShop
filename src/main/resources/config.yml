@@ -33,9 +33,6 @@ database:
   # 数据库类型: mysql 或 sqlite
   type: "sqlite"
 
-  # SQLite配置
-  file: "emcshop.db"
-
   # MySQL配置 (当type为mysql时使用)
   host: localhost
   port: 3306
@@ -43,10 +40,14 @@ database:
   username: root
   password: ''
 
-  # 数据库高级配置（除非你知道这些配置项意味着什么，否则不要乱动哦）
+  # SQLite数据库文件名
+  file: "emcshop.db"
+
+
+  # MYSQL数据库高级配置（除非你知道这些配置项意味着什么，否则不要乱动哦）
   # 连接池配置
   pool:
-    max-size: 8
+    max-size: 20
     min-idle: 2
     connection-timeout: 10000
     idle-timeout: 300000
@@ -58,3 +59,11 @@ database:
     batch-size: 100      # 每次处理的最大任务数
     process-interval: 50 # 队列处理间隔(ms)
     save-delay: 10       # 保存操作延迟(ticks)
+  # SQLite数据库高级配置（除非你知道这些配置项意味着什么，否则不要乱动哦）
+  sqlite-pool:
+    max-size: 3
+    min-idle: 1
+    connection-timeout: 10000
+    idle-timeout: 300000
+    max-lifetime: 900000 # 15分钟
+    leak-detection-threshold: 15000 # 15秒泄漏检测

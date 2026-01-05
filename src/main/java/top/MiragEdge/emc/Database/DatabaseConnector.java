@@ -130,12 +130,12 @@ public class DatabaseConnector {
         String fullPath = dataFolder + "/" + databaseFile;
 
         // 读取连接池配置（SQLite使用较小的连接池）
-        int maxPoolSize = plugin.getConfig().getInt("database.pool.max-size", 5);
-        int minIdle = plugin.getConfig().getInt("database.pool.min-idle", 2);
-        long connectionTimeout = plugin.getConfig().getLong("database.pool.connection-timeout", 30000);
-        long idleTimeout = plugin.getConfig().getLong("database.pool.idle-timeout", 600000);
-        long maxLifetime = plugin.getConfig().getLong("database.pool.max-lifetime", 1800000);
-        long leakDetectionThreshold = plugin.getConfig().getLong("database.pool.leak-detection-threshold", 15000);
+        int maxPoolSize = plugin.getConfig().getInt("database.sqlite-pool.max-size", 3);
+        int minIdle = plugin.getConfig().getInt("database.sqlite-pool.min-idle", 1);
+        long connectionTimeout = plugin.getConfig().getLong("database.sqlite-pool.connection-timeout", 30000);
+        long idleTimeout = plugin.getConfig().getLong("database.sqlite-pool.idle-timeout", 300000);
+        long maxLifetime = plugin.getConfig().getLong("database.sqlite-pool.max-lifetime", 1800000);
+        long leakDetectionThreshold = plugin.getConfig().getLong("database.sqlite-pool.leak-detection-threshold", 15000);
 
         // 配置SQLite连接池
         HikariConfig config = new HikariConfig();
