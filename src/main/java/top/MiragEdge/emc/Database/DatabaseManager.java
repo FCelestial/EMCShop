@@ -26,29 +26,34 @@ public class DatabaseManager {
     // 动态批处理配置
     private volatile int currentBatchSize = 100;
     private volatile long lastProcessTime = 0;
-    private static final int MIN_BATCH_SIZE = 10;
-    private static final int MAX_BATCH_SIZE = 500;
-    private static final int BATCH_ADJUST_THRESHOLD = 100;
-    private static final int SAVE_COOLDOWN_MS = 5000;
+    // 动态批处理配置 - 从配置文件加载
+    private int minBatchSize = 10;
+    private int maxBatchSize = 500;
+    private int batchAdjustThreshold = 100;
+    private int saveCooldownMs = 5000;
+    private int currentBatchSize = 100;
 
     // 内存泄漏防护优化
     private final Map<UUID, WeakReference<PlayerData>> pendingSaves = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastSaveTimes = new ConcurrentHashMap<>();
 
     // 清理定时器 - 定期清理过期数据
-    private final ScheduledExecutorService cleanerScheduler = Executors.newSingleThreadScheduledExecutor();
-    private static final long CLEANUP_INTERVAL_MINUTES = 5;
-    private static final long MAX_SAVE_TIME_AGE_HOURS = 24;
+    private ScheduledExecutorService cleanerScheduler;
+    private long cleanupIntervalMinutes = 5;
+    private long maxSaveTimeAgeHours = 24;
 
     // 死锁重试机制
     private final Map<UUID, List<DatabaseTask>> failedTasksByPlayer = new ConcurrentHashMap<>();
-    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private int maxRetryAttempts = 3;
     private final Map<UUID, Integer> retryCounts = new ConcurrentHashMap<>();
 
     public DatabaseManager(DatabaseConnector connector, EMCShop plugin) {
         this.connector = connector;
         this.plugin = plugin;
         this.logger = plugin.getLogger();
+        
+        // 从配置加载参数
+        loadConfiguration();
 
         // 创建单线程数据库执行器
         this.dbExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -61,6 +66,27 @@ public class DatabaseManager {
         startQueueProcessor();
         startCleanupScheduler();
         createTables();
+    }
+
+    /**
+     * 从配置文件加载数据库相关参数
+     */
+    private void loadConfiguration() {
+        // 默认值已在字段声明时设置
+        if (plugin == null || plugin.getConfig() == null) {
+            logger.warning("插件配置不可用，使用默认数据库参数");
+            return;
+        }
+        
+        minBatchSize = plugin.getConfig().getInt("database.min-batch-size", minBatchSize);
+        maxBatchSize = plugin.getConfig().getInt("database.max-batch-size", maxBatchSize);
+        currentBatchSize = plugin.getConfig().getInt("database.batch-size", currentBatchSize);
+        saveCooldownMs = plugin.getConfig().getInt("database.save-cooldown-ms", saveCooldownMs);
+        maxRetryAttempts = plugin.getConfig().getInt("database.max-retry-attempts", maxRetryAttempts);
+        cleanupIntervalMinutes = plugin.getConfig().getLong("database.cleanup-interval-minutes", cleanupIntervalMinutes);
+        maxSaveTimeAgeHours = plugin.getConfig().getLong("database.max-save-time-age-hours", maxSaveTimeAgeHours);
+        
+        logger.info("数据库配置已加载: batchSize=" + currentBatchSize + ", cooldown=" + saveCooldownMs + "ms");
     }
 
     private void startQueueProcessor() {
@@ -116,6 +142,7 @@ public class DatabaseManager {
     }
 
     private void startCleanupScheduler() {
+        cleanerScheduler = Executors.newSingleThreadScheduledExecutor();
         // 定期清理过期数据
         cleanerScheduler.scheduleAtFixedRate(() -> {
             try {
@@ -123,12 +150,12 @@ public class DatabaseManager {
             } catch (Exception e) {
                 logger.log(Level.WARNING, "清理过期数据时发生异常", e);
             }
-        }, CLEANUP_INTERVAL_MINUTES, CLEANUP_INTERVAL_MINUTES, TimeUnit.MINUTES);
+        }, cleanupIntervalMinutes, cleanupIntervalMinutes, TimeUnit.MINUTES);
     }
 
     private void cleanupExpiredData() {
         long now = System.currentTimeMillis();
-        long maxAge = MAX_SAVE_TIME_AGE_HOURS * 60 * 60 * 1000;
+        long maxAge = maxSaveTimeAgeHours * 60 * 60 * 1000;
 
         // 清理lastSaveTimes中的过期记录
         lastSaveTimes.entrySet().removeIf(entry -> {
@@ -221,7 +248,7 @@ public class DatabaseManager {
                 if (failedTasks == null || failedTasks.isEmpty()) continue;
 
                 Integer retryCount = retryCounts.get(playerId);
-                if (retryCount != null && retryCount >= MAX_RETRY_ATTEMPTS) {
+                if (retryCount != null && retryCount >= maxRetryAttempts) {
                     logger.warning("玩家 " + playerId + " 的任务重试次数已达上限，跳过");
                     continue;
                 }
@@ -262,12 +289,12 @@ public class DatabaseManager {
                     // 更新重试计数
                     int newRetryCount = retryCounts.merge(playerId, 1, Integer::sum);
 
-                    if (newRetryCount >= MAX_RETRY_ATTEMPTS) {
-                        logger.severe("玩家 " + playerId + " 的任务重试 " + MAX_RETRY_ATTEMPTS + " 次后仍然失败");
+                    if (newRetryCount >= maxRetryAttempts) {
+                        logger.severe("玩家 " + playerId + " 的任务重试 " + maxRetryAttempts + " 次后仍然失败");
                         failedTasksByPlayer.remove(playerId);
                         retryCounts.remove(playerId);
                     } else {
-                        logger.warning("玩家 " + playerId + " 的任务重试失败 (" + newRetryCount + "/" + MAX_RETRY_ATTEMPTS + ")");
+                        logger.warning("玩家 " + playerId + " 的任务重试失败 (" + newRetryCount + "/" + maxRetryAttempts + ")");
                     }
                 }
             }
@@ -279,16 +306,16 @@ public class DatabaseManager {
 
     private void adjustBatchSize(long processDuration) {
         // 如果处理时间过长，减少批处理大小
-        if (processDuration > BATCH_ADJUST_THRESHOLD && currentBatchSize > MIN_BATCH_SIZE) {
-            int newSize = Math.max(MIN_BATCH_SIZE, currentBatchSize / 2);
+        if (processDuration > batchAdjustThreshold && currentBatchSize > minBatchSize) {
+            int newSize = Math.max(minBatchSize, currentBatchSize / 2);
             if (newSize != currentBatchSize) {
                 logger.fine("批处理大小从 " + currentBatchSize + " 调整为 " + newSize + " (处理时间: " + processDuration + "ms)");
                 currentBatchSize = newSize;
             }
         }
         // 如果处理时间很短且队列不空，增加批处理大小
-        else if (processDuration < BATCH_ADJUST_THRESHOLD / 2 && taskQueue.size() > currentBatchSize) {
-            int newSize = Math.min(MAX_BATCH_SIZE, currentBatchSize * 2);
+        else if (processDuration < batchAdjustThreshold / 2 && taskQueue.size() > currentBatchSize) {
+            int newSize = Math.min(maxBatchSize, currentBatchSize * 2);
             if (newSize != currentBatchSize) {
                 logger.fine("批处理大小从 " + currentBatchSize + " 调整为 " + newSize + " (处理时间: " + processDuration + "ms)");
                 currentBatchSize = newSize;
@@ -360,7 +387,7 @@ public class DatabaseManager {
 
         // 检查保存冷却时间
         Long lastSave = lastSaveTimes.get(playerId);
-        if (lastSave != null && (now - lastSave) < SAVE_COOLDOWN_MS) {
+        if (lastSave != null && (now - lastSave) < saveCooldownMs) {
             // 使用WeakReference避免内存泄漏
             pendingSaves.put(playerId, new WeakReference<>(playerData));
             return;
@@ -742,7 +769,7 @@ public class DatabaseManager {
 
             // 减少批处理大小以避免死锁
             int oldSize = currentBatchSize;
-            currentBatchSize = Math.max(MIN_BATCH_SIZE, currentBatchSize / 2);
+            currentBatchSize = Math.max(minBatchSize, currentBatchSize / 2);
 
             if (oldSize != currentBatchSize) {
                 logger.info("死锁检测，批处理大小从 " + oldSize + " 调整为 " + currentBatchSize);
@@ -790,7 +817,7 @@ public class DatabaseManager {
     public void savePlayerDataSync() {
         shutdownRequested = true;
         scheduler.shutdownNow();
-        cleanerScheduler.shutdownNow();
+        if (cleanerScheduler != null) cleanerScheduler.shutdownNow();
         dbExecutor.shutdown();
 
         try {
@@ -879,7 +906,7 @@ public class DatabaseManager {
         shutdownRequested = true;
 
         scheduler.shutdown();
-        cleanerScheduler.shutdown();
+        if (cleanerScheduler != null) cleanerScheduler.shutdown();
         dbExecutor.shutdown();
 
         try {
