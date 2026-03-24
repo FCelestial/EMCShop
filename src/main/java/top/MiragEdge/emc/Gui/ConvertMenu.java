@@ -560,11 +560,9 @@ public class ConvertMenu implements InventoryHolder, Listener {
             if (event.getAction() == InventoryAction.DROP_ONE_SLOT ||
                     event.getAction() == InventoryAction.DROP_ALL_SLOT) {
                 event.setCancelled(true);
-                // 设置标记，防止 onInventoryClose 显示额外消息
-                sellClickMap.put(playerId, true);
+                // 设置标记为 false，表示这是Q键出售，不需要在关闭时再次转换
+                sellClickMap.put(playerId, false);
                 sellAllItemsInBackpack(player);
-                double totalValue = calculateTotalValue(inv);
-                updateConvertButton(inv, player, totalValue);
                 return;
             }
 
@@ -614,8 +612,8 @@ public class ConvertMenu implements InventoryHolder, Listener {
         try {
             Boolean sellClick = sellClickMap.remove(playerId);
 
-            if (sellClick != null && sellClick) {
-                // 按Q键出售背包：调用 performConversion
+            if (Boolean.TRUE.equals(sellClick)) {
+                // 正常关闭（点击X按钮）：调用 performConversion
                 performConversion(player, inv, true);
                 SoundManager.playSuccess(player);
             } else if (event.getReason() == Reason.PLAYER) {

@@ -14,6 +14,7 @@ import top.MiragEdge.emc.Database.DatabaseConnector;
 import top.MiragEdge.emc.Database.DatabaseManager;
 import top.MiragEdge.emc.Manager.EMCManager;
 import top.MiragEdge.emc.Utils.MessageUtil;
+import top.MiragEdge.emc.Utils.SparkIntegration;
 
 import java.util.HashSet;
 import java.util.Objects;
@@ -27,6 +28,7 @@ public class EMCShop extends JavaPlugin implements Listener {
     private DatabaseManager dbManager;
     private EMCManager emcManager;
     private static Economy economy;
+    private SparkIntegration sparkIntegration;
 
     @Override
     public void onEnable() {
@@ -71,6 +73,10 @@ public class EMCShop extends JavaPlugin implements Listener {
         MainCommand commandExecutor = new MainCommand(this, emcManager);
         Objects.requireNonNull(getCommand("emcshop")).setExecutor(commandExecutor);
         Objects.requireNonNull(getCommand("emcshop")).setTabCompleter(commandExecutor);
+
+        // 初始化 Spark 性能监控集成
+        sparkIntegration = new SparkIntegration(this);
+        sparkIntegration.initialize();
 
         getLogger().info("等价交换插件已启用");
         getLogger().info("=======================");
@@ -189,6 +195,13 @@ public class EMCShop extends JavaPlugin implements Listener {
      */
     public EMCManager getEmcManager() {
         return emcManager;
+    }
+
+    /**
+     * 获取Spark性能监控集成
+     */
+    public SparkIntegration getSparkIntegration() {
+        return sparkIntegration;
     }
 
     /**
