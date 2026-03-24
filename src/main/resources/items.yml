@@ -47,11 +47,11 @@ EMC_VALUES:
 
     # ===== 加工石质方块 =====
     SMOOTH_STONE: 1 # 平滑石头 - 常见建筑方块
-    #POLISHED_GRANITE: 1 # 磨制花岗岩变种
-    #POLISHED_DIORITE: 1 # 磨制闪长岩变种
-    #POLISHED_ANDESITE: 1 # 磨制安山岩变种
-    #POLISHED_DEEPSLATE: 1 # 磨制深板岩变种
-    #POLISHED_BLACKSTONE: 2 # 磨制黑石变种
+    POLISHED_GRANITE: 1 # 磨制花岗岩变种
+    POLISHED_DIORITE: 1 # 磨制闪长岩变种
+    POLISHED_ANDESITE: 1 # 磨制安山岩变种
+    POLISHED_DEEPSLATE: 1 # 磨制深板岩变种
+    POLISHED_BLACKSTONE: 2 # 磨制黑石变种
 
     STONE_BRICKS: 1 # 石砖 - 常见建筑方块
     #MOSSY_STONE_BRICKS: 2 # 苔石砖变种
@@ -64,7 +64,7 @@ EMC_VALUES:
     #RED_NETHER_BRICKS: 2 # 红色下界砖变种
     #CRACKED_NETHER_BRICKS: 1 # 裂纹下界砖变种
     #CHISELED_NETHER_BRICKS: 1 # 錾制下界砖变种
-    #chiseled_tuff_bricks: 1 # 雕纹凝灰岩砖变种
+    chiseled_tuff_bricks: 1 # 雕纹凝灰岩砖变种
     MUD_BRICKS: 2 # 泥砖建筑方块
     SANDSTONE: 1.3 # 砂岩 - 沙漠建筑方块
     #cut_sandstone: 1.5 # 切制砂岩变种
@@ -79,10 +79,10 @@ EMC_VALUES:
     #CHISELED_POLISHED_BLACKSTONE: 2 # 錾制磨制黑石变种
     #GILDED_BLACKSTONE: 16 # 镶金黑石 - 稀有装饰方块
     QUARTZ_BLOCK: 3 # 石英块 - 现代建筑重要材料
-    #CHISELED_QUARTZ_BLOCK: 32 # 錾制石英块变种
-    #QUARTZ_BRICKS: 32 # 石英砖变种
-    #QUARTZ_PILLAR: 32 # 石英柱变种
-    #SMOOTH_QUARTZ: 32 # 平滑石英块变种
+    #CHISELED_QUARTZ_BLOCK: 3 # 錾制石英块变种
+    #QUARTZ_BRICKS: 3 # 石英砖变种
+    #QUARTZ_PILLAR: 3 # 石英柱变种
+    SMOOTH_QUARTZ: 4 # 平滑石英块变种
     PURPUR_BLOCK: 4 # 紫珀块 - 末地建筑方块
     #PURPUR_PILLAR: 16 # 紫珀柱变种
     #END_STONE_BRICKS: 4 # 末地石砖变种
@@ -181,15 +181,15 @@ EMC_VALUES:
     #SUGAR_CANE: 2 # 甘蔗 - 生电可量产
     #KELP: 1 # 海带 - 生电可量产
     #BAMBOO: 1 # 竹子 - 生电可量产
-    #VINE: 2 # 藤蔓 - 生电可量产
-    GLOW_LICHEN: 4 # 发光地衣 - 生电可量产
-    #MOSS_CARPET: 1 # 苔藓地毯 - 生电可量产
-    #HANGING_ROOTS: 1 # 垂根 - 生电可量产
-    #BIG_DRIPLEAF: 4 # 大型垂滴叶 - 生电可量产
-    #SMALL_DRIPLEAF: 2 # 小型垂滴叶 - 生电可量产
-    #SCULK: 8 # 幽匿方块 - 生电可量产
+    #VINE: 2 # 藤蔓
+    GLOW_LICHEN: 4 # 发光地衣
+    #MOSS_CARPET: 1 # 苔藓地毯
+    HANGING_ROOTS: 1 # 垂根
+    BIG_DRIPLEAF: 4 # 大型垂滴叶
+    SMALL_DRIPLEAF: 2 # 小型垂滴叶
+    #SCULK: 8 # 幽匿方块
     LILY_PAD: 16 # 睡莲 - 装饰性植物
-    #SEA_PICKLE: 1 # 海泡菜 - 生电可量产
+    SEA_PICKLE: 1 # 海泡菜
 
     # 去除所有珊瑚类方块且生电可量产
     #TUBE_CORAL: 2 # 管珊瑚
@@ -222,12 +222,13 @@ EMC_VALUES:
     #DEAD_BUBBLE_CORAL_FAN: 2 # 枯死气泡珊瑚扇
     #DEAD_FIRE_CORAL_FAN: 2 # 枯死火珊瑚扇
     #DEAD_HORN_CORAL_FAN: 2 # 枯死角珊瑚扇
-    
+
     # ===== 基础光源方块 =====
-    LANTERN: 8 # 灯笼 - 常见光源
-    #SOUL_LANTERN: 10 # 灵魂灯笼变种
+    LANTERN: 4 # 灯笼 - 常见光源
+    SOUL_LANTERN: 5 # 灵魂灯笼
+    copper_lantern: 5 # 铜灯笼
     GLOWSTONE: 8 # 荧石 - 重要光源方块
-    SEA_LANTERN: 16 # 海晶灯 - 水下光源
+    SEA_LANTERN: 8 # 海晶灯 - 水下光源
     #SHROOMLIGHT: 2 # 菌光体 - 生电可量产
     #OCHRE_FROGLIGHT: 16 # 赭黄蛙明灯 - 稀有光源
     #VERDANT_FROGLIGHT: 16 # 翠绿蛙明灯 - 稀有光源
@@ -334,8 +335,8 @@ EMC_VALUES:
     # ===== 基础建筑装饰 =====
     #LADDER: 3 # 梯子 - 基础功能方块
     #SCAFFOLDING: 1 # 脚手架 - 功能性方块
-    CHAIN: 8 # 锁链 - 装饰性方块
-    IRON_BARS: 8 # 铁栏杆
+    #CHAIN: 8 # 锁链 - 装饰性方块
+    #IRON_BARS: 8 # 铁栏杆
     #ARMOR_STAND: 16 # 盔甲架 - 功能性方块
     #BELL: 128 # 钟 - 稀有装饰方块
     #BARREL: 8 # 木桶 - 存储方块
@@ -447,7 +448,7 @@ EMC_VALUES:
     #PRISMARINE_SLAB: 6 # 海晶石台阶
     #DARK_PRISMARINE_SLAB: 8 # 暗海晶石台阶
     #PRISMARINE_BRICK_SLAB: 18 # 海晶石砖台阶
-    #QUARTZ_SLAB: 16 # 石英台阶 - 现代建筑组件
+    #QUARTZ_SLAB: 1.5 # 石英台阶 - 现代建筑组件
     #PURPUR_SLAB: 8 # 紫珀台阶
     #END_STONE_BRICK_SLAB: 3 # 末地石砖台阶
     #GRANITE_SLAB: 3 # 花岗岩台阶
@@ -469,7 +470,7 @@ EMC_VALUES:
     #PRISMARINE_STAIRS: 18 # 海晶石楼梯
     #DARK_PRISMARINE_STAIRS: 24 # 暗海晶石楼梯
     #PRISMARINE_BRICK_STAIRS: 54 # 海晶石砖楼梯
-    #QUARTZ_STAIRS: 48 # 石英楼梯 - 现代建筑组件
+    #QUARTZ_STAIRS: 4 # 石英楼梯 - 现代建筑组件
     #PURPUR_STAIRS: 24 # 紫珀楼梯
     #END_STONE_BRICK_STAIRS: 9 # 末地石砖楼梯
     #GRANITE_STAIRS: 9 # 花岗岩楼梯
@@ -498,5 +499,6 @@ EMC_VALUES:
     #POLISHED_BLACKSTONE_WALL: 4 # 磨制黑石墙
 
     # 其他特殊物品，玩家要求的）
-    FLOWER_POT: 1.8 #花盆
-    CANDLE: 5.8 #蜡烛
+    flower_pot: 1.8 #花盆
+    candle: 5.8 #蜡烛
+    end_rod: 3.5 #末地烛

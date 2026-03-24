@@ -24,7 +24,7 @@ convert-menu:
   error-occurred: "<gradient:#FF5555:#FFAA00>转换过程出错，物品已保存</gradient>"
   menu-saved: "<gradient:#FFAA00:#FF5555>菜单异常关闭，物品已保存</gradient>"
   backpack-sold: "<color:#55FF55>出售背包物品获得 </color><color:#FFFF55><bold>%amount%</bold></color><color:#55FF55> %currency%</color>"
-  no-backpack-items: "<color:#FF5555>背包中没有可出售的基础物品！</color>"
+  no-backpack-items: "<color:#FF5555>背包中没有可转化的物品！</color>"
 
 # 预览菜单消息
 preview-menu:

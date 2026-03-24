@@ -66,8 +66,15 @@ public class ConvertMenu implements InventoryHolder, Listener {
     private volatile long lastSaveTime = 0;
     private static final long SAVE_COOLDOWN = 5000;
 
-    // 线程安全地跟踪每个玩家的出售点击状态
-    private final Map<UUID, Boolean> sellClickMap = new ConcurrentHashMap<>();
+    // 线程安全地跟踪每个玩家的操作状态
+    // 0 = 非Q操作（正常关闭才显示消息）
+    // 1 = Q出售背包（成功，不显示消息）
+    // 2 = Q出售背包但没有物品（显示"没有物品"消息）
+    private final Map<UUID, Integer> sellClickMap = new ConcurrentHashMap<>();
+
+    // 跟踪是否要抑制"菜单没有物品"消息的标记
+    // 当Q出售背包成功（无论菜单是否有物品）时设置为true
+    private final Map<UUID, Boolean> suppressMenuNoItemsMap = new ConcurrentHashMap<>();
 
     public ConvertMenu(JavaPlugin plugin, EMCManager emcManager) {
         this.plugin = plugin;
@@ -382,6 +389,11 @@ public class ConvertMenu implements InventoryHolder, Listener {
         }
 
         if (totalValue > 0) {
+            // Q出售成功 - 标记为状态1，不显示"异常关闭"消息
+            sellClickMap.put(player.getUniqueId(), 1);
+            // 标记抑制菜单"没有物品"消息
+            suppressMenuNoItemsMap.put(player.getUniqueId(), true);
+
             emcManager.depositWithRetry(player, totalValue);
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("amount", String.format("%,.1f", totalValue));
@@ -409,18 +421,19 @@ public class ConvertMenu implements InventoryHolder, Listener {
                 }
                 player.sendMessage(baseMessage);
             }
+
+            // 关闭GUI
+            player.closeInventory();
         } else {
-            // 没有物品时提示
+            // 没有物品时提示 - 标记为状态2（跳过 performConversion，避免重复消息）
+            sellClickMap.put(player.getUniqueId(), 2);
             player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.no-backpack-items"));
             SoundManager.playError(player);
+            player.closeInventory();
         }
-
-        // 移除标记并关闭GUI，防止 onInventoryClose 再次处理
-        sellClickMap.remove(player.getUniqueId());
-        player.closeInventory();
     }
 
-    private void performConversion(Player player, Inventory inv, boolean isNormalClose) {
+    private void performConversion(Player player, Inventory inv, boolean isNormalClose, boolean suppressNoItemsMessage) {
         UUID playerId = player.getUniqueId();
 
         if (convertingPlayers.contains(playerId)) return;
@@ -439,8 +452,10 @@ public class ConvertMenu implements InventoryHolder, Listener {
             }
 
             if (itemsSnapshot.isEmpty()) {
-                player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.no-items"));
-                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.8f);
+                if (!suppressNoItemsMessage) {
+                    player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.no-items"));
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.8f);
+                }
                 return;
             }
 
@@ -560,14 +575,15 @@ public class ConvertMenu implements InventoryHolder, Listener {
             if (event.getAction() == InventoryAction.DROP_ONE_SLOT ||
                     event.getAction() == InventoryAction.DROP_ALL_SLOT) {
                 event.setCancelled(true);
-                // 设置标记为 false，表示这是Q键出售，不需要在关闭时再次转换
-                sellClickMap.put(playerId, false);
+                // Q键出售背包 - sellAllItemsInBackpack 会设置状态 (1=成功, 2=没物品)
+                // 不在这里设置，让 sellAllItemsInBackpack 处理
                 sellAllItemsInBackpack(player);
                 return;
             }
 
             event.setCancelled(true);
-            sellClickMap.put(playerId, true);
+            // 点击X按钮正常关闭 - 设置为1表示需要在关闭时执行转换
+            sellClickMap.put(playerId, 1);
             player.closeInventory();
             return;
         }
@@ -610,14 +626,23 @@ public class ConvertMenu implements InventoryHolder, Listener {
         if (inv == null) return;
 
         try {
-            Boolean sellClick = sellClickMap.remove(playerId);
+            Integer sellClick = sellClickMap.remove(playerId);
+            Boolean suppressNoItems = suppressMenuNoItemsMap.remove(playerId);
 
-            if (Boolean.TRUE.equals(sellClick)) {
-                // 正常关闭（点击X按钮）：调用 performConversion
-                performConversion(player, inv, true);
+            if (sellClick != null && sellClick == 1) {
+                // 状态1：Q出售背包成功 或 点击X按钮正常关闭
+                // 根据 suppressNoItems 标志决定是否抑制"菜单没有物品"消息
+                // Q出售背包成功时会设置 suppressNoItems=true，X按钮关闭则不会设置
+                boolean shouldSuppress = Boolean.TRUE.equals(suppressNoItems);
+                performConversion(player, inv, true, shouldSuppress);
                 SoundManager.playSuccess(player);
-            } else if (event.getReason() == Reason.PLAYER) {
-                // 点击X按钮直接关闭：保存物品并静默关闭，不发送消息
+            } else if (sellClick != null && sellClick == 2) {
+                // 状态2：Q出售但背包没有物品
+                // 不执行转换（已在 sellAllItemsInBackpack 中显示消息），直接保存
+                savePendingItems(player, inv);
+                saveAllPendingItemsAsync();
+            } else if (event.getReason() == Reason.PLAYER || event.getReason() == Reason.PLUGIN) {
+                // 无标记且是玩家或插件关闭：保存物品，不显示"异常关闭"消息
                 savePendingItems(player, inv);
                 saveAllPendingItemsAsync();
             } else {
