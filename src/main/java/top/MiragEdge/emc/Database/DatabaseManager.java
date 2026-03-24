@@ -1009,6 +1009,13 @@ public class DatabaseManager {
     }
 
     /**
+     * 获取数据库连接器
+     */
+    public DatabaseConnector getConnector() {
+        return connector;
+    }
+
+    /**
      * 重置批处理大小为默认值
      */
     public void resetBatchSize() {

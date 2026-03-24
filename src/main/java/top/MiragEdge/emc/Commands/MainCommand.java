@@ -32,6 +32,7 @@ public class MainCommand implements CommandExecutor, TabExecutor {
         subCommands.put("convert", new ConvertCommand(plugin, emcManager));
         subCommands.put("item", new ItemCommand(plugin));
         subCommands.put("reload", new ReloadCommand(plugin));
+        subCommands.put("money", new MoneyCommand(plugin, emcManager));
     }
 
     @Override
@@ -83,6 +84,7 @@ public class MainCommand implements CommandExecutor, TabExecutor {
         sender.sendMessage(createCommandHelp("/view", "打开物品预览菜单(快捷)", SECONDARY_COLOR));
         sender.sendMessage(createCommandHelp("/sell", "打开物品转换菜单(快捷)", SECONDARY_COLOR));
         sender.sendMessage(createCommandHelp("/emcshop item", "查看手持物品的灵叶价值", INFO_COLOR));
+        sender.sendMessage(createCommandHelp("/emcshop money", "EMC货币管理（仅EMC模式）", INFO_COLOR));
         sender.sendMessage(createCommandHelp("/emcshop reload", "重载等价交换配置", ACCENT_COLOR));
         sender.sendMessage(footer);
         sender.sendMessage(Component.empty());

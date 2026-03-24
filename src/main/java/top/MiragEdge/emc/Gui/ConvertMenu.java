@@ -642,9 +642,9 @@ public class ConvertMenu implements InventoryHolder, Listener {
                 savePendingItems(player, inv);
                 saveAllPendingItemsAsync();
             } else if (event.getReason() == Reason.PLAYER || event.getReason() == Reason.PLUGIN) {
-                // 无标记且是玩家或插件关闭：保存物品，不显示"异常关闭"消息
-                savePendingItems(player, inv);
-                saveAllPendingItemsAsync();
+                // 玩家或插件关闭：执行转换，不显示"异常关闭"消息
+                // 但如果菜单为空则正常显示"没发现任何物品"消息
+                performConversion(player, inv, true, false);
             } else {
                 // 其他关闭原因（如服务器卸载）：保存物品并显示消息
                 savePendingItems(player, inv);

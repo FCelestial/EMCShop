@@ -66,6 +66,20 @@ public class EMCManager {
         plugin.getLogger().info("经济模式已强制设置为: " + mode);
     }
 
+    /**
+     * 检查是否使用EMC独立经济模式
+     */
+    public boolean isUsingEMCEconomy() {
+        return currentEconomyMode == EconomyMode.EMC;
+    }
+
+    /**
+     * 获取数据库管理器
+     */
+    public DatabaseManager getDbManager() {
+        return dbManager;
+    }
+
     // 加载物品EMC值（添加异常处理）
     public void loadEMCValues() {
         emcValues.clear();
