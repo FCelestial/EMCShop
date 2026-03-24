@@ -3,20 +3,15 @@ package top.MiragEdge.emc.Gui;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.ClickType;
-import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import top.MiragEdge.emc.EMCShop;
+import top.MiragEdge.emc.Gui.shared.SharedConstants;
+import top.MiragEdge.emc.Gui.shared.SoundManager;
 import top.MiragEdge.emc.Manager.EMCManager;
 import top.MiragEdge.emc.Utils.LocalizationUtil;
 import top.MiragEdge.emc.Utils.MessageUtil;
@@ -25,161 +20,88 @@ import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class PurchaseMenu implements Listener, InventoryHolder {
+/**
+ * 购买菜单
+ * 玩家可以在这里购买已解锁的物品
+ */
+public class PurchaseMenu extends BaseMenu {
 
-    // 定义渐变色方案
-    private static final TextColor PRIMARY_COLOR = TextColor.fromHexString("#39C5BB"); // 主色调 - 蓝绿色
-    private static final TextColor SECONDARY_COLOR = TextColor.fromHexString("#FFD166"); // 辅色调 - 琥珀色
-    private static final TextColor ACCENT_COLOR = TextColor.fromHexString("#FF6B6B"); // 强调色 - 珊瑚红
-    private static final TextColor INFO_COLOR = TextColor.fromHexString("#A9DEF9"); // 信息色 - 淡蓝色
-    private static final TextColor SUCCESS_COLOR = TextColor.fromHexString("#9EE6A0"); // 成功色 - 薄荷绿
-    private static final TextColor WARNING_COLOR = TextColor.fromHexString("#FFD166"); // 警告色 - 琥珀色
-    private static final TextColor ERROR_COLOR = TextColor.fromHexString("#FF6B6B"); // 错误色 - 珊瑚红
-    private static final TextColor HIGHLIGHT_COLOR = TextColor.fromHexString("#FFB347"); // 高亮色 - 橙黄色
-    private static final TextColor NEUTRAL_COLOR = TextColor.fromHexString("#D3D3D3"); // 中性色 - 浅灰色
-
-    private final EMCShop plugin;
-    private final EMCManager emcManager;
+    /** 玩家当前页面缓存 */
     private final Map<UUID, Integer> playerPages = new ConcurrentHashMap<>();
-    // 添加缓存存储每个玩家当前页面的解锁物品列表
-    private final Map<UUID, List<String>> playerPageItems = new ConcurrentHashMap<>();
-    private static final int PAGE_SIZE = 36; // 4行x9列
-    private static final int[] TOP_BORDER_SLOTS = {0, 1, 2, 3, 4, 5, 6, 7, 8};
-    private static final int[] BOTTOM_BORDER_SLOTS = {45, 46, 47, 48, 49, 50, 51, 52, 53};
-    private static final int PLAYER_HEAD_SLOT = 4;
-    private static final int PREV_PAGE_SLOT = 46;
-    private static final int NEXT_PAGE_SLOT = 52;
-    private static final int CLOSE_BUTTON_SLOT = 49;
-    private static final int[] CONTENT_SLOTS = new int[PAGE_SIZE]; // 9*4=36
 
-    // 重构损耗率（从配置读取）
+    /** 重构损耗率 */
     private final double reconstructionLoss;
 
-    // 用于格式化价格的工具
+    /** 货币名称 */
+    private final String currencyName;
+
+    /** 格式化价格的工具 */
     private final DecimalFormat priceFormat = new DecimalFormat("#,##0.00");
 
-    // 音效配置常量（1.21.4专属优化）
-    private static final float UI_SOUND_VOLUME = 0.6f;       // UI操作音稍低避免刺耳
-    private static final float SUCCESS_SOUND_VOLUME = 0.9f;  // 成功音清晰但不突兀
-    private static final float ERROR_SOUND_VOLUME = 0.7f;    // 错误音柔和提示
-    private static final float BASE_PITCH = 1.0f;
-    private static final float HIGH_PITCH = 1.15f;           // 稍高音调区分正向操作
-    private static final float LOW_PITCH = 0.85f;            // 稍低音调区分反向操作
-    private static final float SOFT_PITCH = 0.9f;            // 柔和音调用于次要提示
-
-    static {
-        // 计算内容槽位 (9-44)
-        for (int i = 0; i < PAGE_SIZE; i++) {
-            CONTENT_SLOTS[i] = i + 9;
-        }
-    }
-
     public PurchaseMenu(EMCShop plugin) {
-        this.plugin = plugin;
-        this.emcManager = plugin.getEmcManager();
+        super(plugin, plugin.getEmcManager(), "purchase-menu.title");
         this.reconstructionLoss = plugin.getConfig().getDouble("purchase.reconstruction-loss", 0.015);
-        Bukkit.getPluginManager().registerEvents(this, plugin);
+        this.currencyName = MessageUtil.getInstance().getCurrencyName();
     }
 
-    // 打开购买菜单
-    public void openPurchaseMenu(Player player) {
-        UUID playerId = player.getUniqueId();
-
-        if (emcManager.getPlayerData(playerId) == null) {
-            player.sendMessage(MessageUtil.getInstance().getMessage("general.data-loading"));
-            emcManager.onPlayerLogin(player);
-            Bukkit.getScheduler().runTaskLater(plugin, () -> openPurchaseMenu(player), 20L);
-            return;
-        }
-
-        playerPages.putIfAbsent(playerId, 0);
-        player.openInventory(createPage(player, 0));
-        // 播放音效
-        player.playSound(player.getLocation(), Sound.BLOCK_WOODEN_DOOR_OPEN, 1.0f, 1.0f);
+    @Override
+    protected boolean isPlayerDataLoaded(UUID playerId) {
+        return emcManager.getPlayerData(playerId) != null;
     }
 
-    // 创建菜单页面
-    private Inventory createPage(Player player, int page) {
-        UUID playerId = player.getUniqueId();
-        List<String> allItems = new ArrayList<>(emcManager.getEmcValues().keySet());
+    @Override
+    protected List<String> getMenuItems(Player player) {
+        Set<String> playerUnlocks = emcManager.getPlayerUnlockedItems(player.getUniqueId());
+        Set<String> validItems = emcManager.getEmcValues().keySet();
+
         List<String> unlockedItems = new ArrayList<>();
-
-        for (String itemId : allItems) {
-            if (emcManager.isItemUnlocked(player, itemId)) {
+        for (String itemId : playerUnlocks) {
+            if (validItems.contains(itemId)) {
                 unlockedItems.add(itemId);
             }
         }
+        return unlockedItems;
+    }
 
-        int totalPages = (int) Math.ceil((double) unlockedItems.size() / PAGE_SIZE);
-        // 安全处理：当没有物品时，totalPages为0，需要确保页码有效
-        int maxPage = Math.max(0, totalPages - 1);
-        page = Math.max(0, Math.min(page, maxPage));
+    @Override
+    protected double getItemValue(String itemId) {
+        return emcManager.getItemValue(itemId);
+    }
+
+    @Override
+    protected Material getBorderMaterial() {
+        return Material.LIGHT_BLUE_STAINED_GLASS_PANE;
+    }
+
+    @Override
+    protected ItemStack createContentItem(Player player, String itemId, double value) {
+        return createShopItem(itemId, value);
+    }
+
+    @Override
+    protected void handleContentClick(Player player, String itemId, int amount) {
+        purchaseItem(player, itemId, amount);
+    }
+
+    @Override
+    protected int getCurrentPage(UUID playerId) {
+        return playerPages.getOrDefault(playerId, 0);
+    }
+
+    @Override
+    protected void getOrInitPage(UUID playerId) {
+        playerPages.putIfAbsent(playerId, 0);
+    }
+
+    @Override
+    protected void setCurrentPage(UUID playerId, int page) {
         playerPages.put(playerId, page);
-
-        // 从配置创建标题
-        Map<String, String> titlePlaceholders = new HashMap<>();
-        titlePlaceholders.put("page", String.valueOf(page + 1));
-        titlePlaceholders.put("total", String.valueOf(totalPages));
-        Component title = MessageUtil.getInstance().getMessage("purchase-menu.title", titlePlaceholders);
-
-        Inventory inv = Bukkit.createInventory(this, 54, title);
-
-        // 设置边框和按钮
-        for (int slot : TOP_BORDER_SLOTS) {
-            inv.setItem(slot, createBorderItem(Material.LIGHT_BLUE_STAINED_GLASS_PANE));
-        }
-        inv.setItem(PLAYER_HEAD_SLOT, createPlayerInfoItem(player, unlockedItems.size(), allItems.size()));
-        for (int slot : BOTTOM_BORDER_SLOTS) {
-            inv.setItem(slot, createBorderItem(Material.LIGHT_BLUE_STAINED_GLASS_PANE));
-        }
-
-        if (page > 0) {
-            inv.setItem(PREV_PAGE_SLOT, createNavigationItem(Material.PAPER,
-                    Component.text("« 上一页", SECONDARY_COLOR)));
-        } else {
-            inv.setItem(PREV_PAGE_SLOT, createBorderItem(Material.LIGHT_BLUE_STAINED_GLASS_PANE));
-        }
-
-        if (page < totalPages - 1) {
-            inv.setItem(NEXT_PAGE_SLOT, createNavigationItem(Material.PAPER,
-                    Component.text("下一页 »", SECONDARY_COLOR)));
-        } else {
-            inv.setItem(NEXT_PAGE_SLOT, createBorderItem(Material.LIGHT_BLUE_STAINED_GLASS_PANE));
-        }
-
-        inv.setItem(CLOSE_BUTTON_SLOT, createCloseButton());
-
-        // 添加物品
-        int startIdx = page * PAGE_SIZE;
-        int endIdx = Math.min(startIdx + PAGE_SIZE, unlockedItems.size());
-
-        // 存储当前页面的物品列表
-        List<String> currentPageItems = new ArrayList<>();
-        for (int i = startIdx; i < endIdx; i++) {
-            String itemId = unlockedItems.get(i);
-            double baseValue = emcManager.getItemValue(itemId);
-            int slot = CONTENT_SLOTS[i - startIdx];
-            inv.setItem(slot, createShopItem(itemId, baseValue));
-            currentPageItems.add(itemId); // 添加到当前页面物品列表
-        }
-
-        // 缓存当前页面的物品列表
-        playerPageItems.put(playerId, currentPageItems);
-
-        return inv;
     }
 
-    // 创建边框物品
-    private ItemStack createBorderItem(Material material) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text(" "));
-        item.setItemMeta(meta);
-        return item;
-    }
+    // ==================== PurchaseMenu 特有方法 ====================
 
-    // 创建玩家信息物品
-    private ItemStack createPlayerInfoItem(Player player, int unlockedCount, int totalItems) {
+    @Override
+    protected ItemStack createInfoItem(Player player, int totalItems) {
         ItemStack item;
         try {
             item = new ItemStack(Material.PLAYER_HEAD);
@@ -191,47 +113,31 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         }
 
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text(player.getName(), HIGHLIGHT_COLOR)
+        meta.displayName(Component.text(player.getName(), SharedConstants.HIGHLIGHT_COLOR)
                 .decoration(TextDecoration.ITALIC, false));
 
-        String currencyName = MessageUtil.getInstance().getCurrencyName();
+        int unlockedCount = getMenuItems(player).size();
+
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text("已解锁: ", NEUTRAL_COLOR)
-                .append(Component.text(unlockedCount + "/" + totalItems, SECONDARY_COLOR)));
+        lore.add(Component.text("已解锁: ", SharedConstants.NEUTRAL_COLOR)
+                .append(Component.text(unlockedCount + "/" + totalItems, SharedConstants.SECONDARY_COLOR)));
 
         double balance = emcManager.getBalance(player);
-        lore.add(Component.text("余额: ", NEUTRAL_COLOR)
-                .append(Component.text(priceFormat.format(balance) + " " + currencyName, SUCCESS_COLOR)));
+        lore.add(Component.text("余额: ", SharedConstants.NEUTRAL_COLOR)
+                .append(Component.text(priceFormat.format(balance) + " " + currencyName, SharedConstants.SUCCESS_COLOR)));
 
         String lossPercentage = String.format("%.2f", reconstructionLoss * 100);
-        lore.add(Component.text("重构损耗: ", NEUTRAL_COLOR)
-                .append(Component.text(lossPercentage + "%", ERROR_COLOR)));
+        lore.add(Component.text("重构损耗: ", SharedConstants.NEUTRAL_COLOR)
+                .append(Component.text(lossPercentage + "%", SharedConstants.ERROR_COLOR)));
 
         meta.lore(lore);
         item.setItemMeta(meta);
         return item;
     }
 
-    // 创建导航按钮（翻页）
-    private ItemStack createNavigationItem(Material material, Component name) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        meta.displayName(name.decoration(TextDecoration.ITALIC, false));
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    // 创建关闭按钮
-    private ItemStack createCloseButton() {
-        ItemStack item = new ItemStack(Material.BARRIER);
-        ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("✖ 关闭菜单", ERROR_COLOR)
-                .decoration(TextDecoration.ITALIC, false));
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    // 创建商店物品（已解锁）
+    /**
+     * 创建商店物品（已解锁物品）
+     */
     private ItemStack createShopItem(String itemId, double baseValue) {
         Material material = Material.matchMaterial(itemId);
         if (material == null || material == Material.AIR) {
@@ -243,29 +149,28 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         if (meta != null) {
             String translationKey = material.translationKey();
             Component translatedName = Component.translatable(translationKey)
-                    .color(PRIMARY_COLOR)
+                    .color(SharedConstants.PRIMARY_COLOR)
                     .decoration(TextDecoration.ITALIC, false);
             meta.displayName(translatedName);
 
             double actualPrice = baseValue * (1 + reconstructionLoss);
             String formattedActualPrice = priceFormat.format(actualPrice);
-            String currencyName = MessageUtil.getInstance().getCurrencyName();
+
             List<Component> lore = new ArrayList<>();
 
-            // 使用渐变色显示价格信息
             lore.add(Component.text()
-                    .append(Component.text("重构价格: ", NEUTRAL_COLOR))
-                    .append(Component.text(formattedActualPrice + " " + currencyName, HIGHLIGHT_COLOR))
+                    .append(Component.text("重构价格: ", SharedConstants.NEUTRAL_COLOR))
+                    .append(Component.text(formattedActualPrice + " " + currencyName, SharedConstants.HIGHLIGHT_COLOR))
                     .build());
 
             lore.add(Component.text()
-                    .append(Component.text("左键", SECONDARY_COLOR))
-                    .append(Component.text("点击购买一个", INFO_COLOR))
+                    .append(Component.text("左键", SharedConstants.SECONDARY_COLOR))
+                    .append(Component.text("点击购买一个", SharedConstants.INFO_COLOR))
                     .build());
 
             lore.add(Component.text()
-                    .append(Component.text("按Q", SECONDARY_COLOR))
-                    .append(Component.text("扔出购买一组", INFO_COLOR))
+                    .append(Component.text("Shift+左键", SharedConstants.SECONDARY_COLOR))
+                    .append(Component.text("购买一组", SharedConstants.INFO_COLOR))
                     .build());
 
             meta.lore(lore);
@@ -274,168 +179,43 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         return item;
     }
 
-    // 处理菜单点击事件
-    @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getInventory().getHolder() instanceof PurchaseMenu) || !(event.getWhoClicked() instanceof Player)) {
-            return;
-        }
-
-        Player player = (Player) event.getWhoClicked();
-        UUID playerId = player.getUniqueId();
-        int slot = event.getRawSlot();
-        event.setCancelled(true);
-
-        int currentPage = playerPages.getOrDefault(playerId, 0);
-
-        // 点击关闭按钮
-        if (slot == CLOSE_BUTTON_SLOT) {
-            player.closeInventory();
-            // 关闭音效
-            player.playSound(player.getLocation(), Sound.BLOCK_CHEST_CLOSE, UI_SOUND_VOLUME, LOW_PITCH);
-            // 清除缓存
-            playerPageItems.remove(playerId);
-            return;
-        }
-
-        // 点击上一页
-        if (slot == PREV_PAGE_SLOT && currentPage > 0) {
-            player.openInventory(createPage(player, currentPage - 1));
-            // 翻页音效
-            player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, UI_SOUND_VOLUME, LOW_PITCH);
-            return;
-        }
-
-        // 点击下一页
-        if (slot == NEXT_PAGE_SLOT) {
-            List<String> unlockedItems = getUnlockedItems(player);
-            int totalPages = (int) Math.ceil((double) unlockedItems.size() / PAGE_SIZE);
-            if (currentPage < totalPages - 1) {
-                player.openInventory(createPage(player, currentPage + 1));
-                // 翻页音效
-                player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, UI_SOUND_VOLUME, HIGH_PITCH);
-            } else {
-                // 无效操作提示
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, ERROR_SOUND_VOLUME, SOFT_PITCH);
-            }
-            return;
-        }
-
-        // 点击内容槽位（已解锁物品）
-        if (isContentSlot(slot)) {
-            int contentIndex = getContentIndex(slot, currentPage);
-
-            // 获取当前页面的物品列表（缓存）
-            List<String> pageItems = playerPageItems.get(playerId);
-            if (pageItems == null) {
-                // 如果缓存不存在，重新创建页面
-                player.openInventory(createPage(player, currentPage));
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, ERROR_SOUND_VOLUME, SOFT_PITCH);
-                return;
-            }
-
-            // 确保索引在当前页范围内
-            if (contentIndex >= 0 && contentIndex < pageItems.size()) {
-                String itemId = pageItems.get(contentIndex);
-
-                if (event.getClick().isLeftClick()) {
-                    purchaseItem(player, itemId, 1);
-                } else if (event.getClick() == ClickType.DROP) {
-                    Material material = Material.matchMaterial(itemId);
-                    if (material != null) {
-                        int amount = new ItemStack(material).getMaxStackSize();
-                        purchaseItem(player, itemId, amount);
-                    }
-                }
-            } else {
-                // 空槽位点击：轻微无效提示
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, ERROR_SOUND_VOLUME, SOFT_PITCH);
-            }
-        } else if (isBorderSlot(slot)) {
-            // 边框点击：极低音量的反馈（几乎不打扰）
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.2f, SOFT_PITCH);
-        }
-    }
-
-    // 检查是否是边框槽位
-    private boolean isBorderSlot(int slot) {
-        for (int borderSlot : TOP_BORDER_SLOTS) if (slot == borderSlot) return true;
-        for (int borderSlot : BOTTOM_BORDER_SLOTS) if (slot == borderSlot) return true;
-        return false;
-    }
-
-    // 检查是否是内容槽位
-    private boolean isContentSlot(int slot) {
-        for (int contentSlot : CONTENT_SLOTS) if (slot == contentSlot) return true;
-        return false;
-    }
-
-    // 获取内容索引（当前页内的索引）
-    private int getContentIndex(int slot, int currentPage) {
-        int startContentSlot = CONTENT_SLOTS[0];
-        return slot - startContentSlot;
-    }
-
-    // 获取玩家已解锁物品列表
-    private List<String> getUnlockedItems(Player player) {
-        // 获取玩家所有解锁物品（包括配置中已删除的）
-        Set<String> playerUnlocks = emcManager.getPlayerUnlockedItems(player.getUniqueId());
-
-        // 获取当前配置中所有有效物品ID
-        Set<String> validItems = emcManager.getEmcValues().keySet();
-
-        // 双重验证：只保留同时存在于解锁列表和当前配置的物品
-        List<String> unlockedItems = new ArrayList<>();
-        for (String itemId : playerUnlocks) {
-            if (validItems.contains(itemId)) {
-                unlockedItems.add(itemId);
-            }
-        }
-        return unlockedItems;
-    }
-
-    // 购买物品（添加重构损耗）
+    /**
+     * 购买物品
+     */
     private void purchaseItem(Player player, String itemId, int amount) {
         double baseValue = emcManager.getItemValue(itemId);
         double actualPricePerItem = baseValue * (1 + reconstructionLoss);
         double totalPrice = actualPricePerItem * amount;
         double balance = emcManager.getBalance(player);
 
-        // 余额不足
         if (balance < totalPrice) {
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("price", priceFormat.format(totalPrice));
-            placeholders.put("currency", MessageUtil.getInstance().getCurrencyName());
+            placeholders.put("currency", currencyName);
             player.sendMessage(MessageUtil.getInstance().getMessage("purchase-menu.insufficient-funds", placeholders));
-            // 错误提示
-            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, ERROR_SOUND_VOLUME, BASE_PITCH);
+            SoundManager.playError(player);
             return;
         }
 
-        // 物品无效检查
         Material material = Material.matchMaterial(itemId);
         if (material == null || material == Material.AIR) {
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("item", itemId);
             player.sendMessage(MessageUtil.getInstance().getMessage("purchase-menu.invalid-item", placeholders));
-            player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, ERROR_SOUND_VOLUME, LOW_PITCH);
+            SoundManager.playItemBreak(player);
             return;
         }
 
-        // 背包空间检查
         ItemStack itemStack = new ItemStack(material, amount);
         Map<Integer, ItemStack> leftOver = player.getInventory().addItem(itemStack);
         if (!leftOver.isEmpty()) {
             player.sendMessage(MessageUtil.getInstance().getMessage("purchase-menu.inventory-full"));
-            // 空间不足：轻量的提示音
-            player.playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_LEATHER, ERROR_SOUND_VOLUME, SOFT_PITCH);
+            SoundManager.playInventoryFull(player);
             return;
         }
 
-        // 购买成功流程
         emcManager.withdraw(player, totalPrice);
         Component itemName = LocalizationUtil.getLocalizedName(material);
-        String currencyName = MessageUtil.getInstance().getCurrencyName();
 
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("item", "");
@@ -446,27 +226,19 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         placeholders.put("currency", currencyName);
 
         Component message = MessageUtil.getInstance().getMessage("purchase-menu.purchase-success", placeholders);
-
-        // 手动替换物品名称部分，因为我们需要Component而不是字符串
         message = replaceItemNamePlaceholder(message, itemName);
 
         player.sendMessage(message);
-        // 购买成功
-        player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, SUCCESS_SOUND_VOLUME, HIGH_PITCH);
+        SoundManager.playSuccess(player);
 
         // 刷新菜单
-        player.openInventory(createPage(player, playerPages.get(player.getUniqueId())));
+        player.openInventory(createPage(player, getCurrentPage(player.getUniqueId())));
     }
 
-    // 辅助方法：替换消息中的物品名称占位符
+    /**
+     * 替换消息中的物品名称占位符
+     */
     private Component replaceItemNamePlaceholder(Component message, Component itemName) {
-        // 这里简化处理，实际可能需要更复杂的Component遍历
-        // 对于简单的消息结构，我们可以直接构建新的消息
-        return message; // 在实际实现中可能需要更复杂的逻辑来处理Component中的占位符
-    }
-
-    @Override
-    public Inventory getInventory() {
-        return null;
+        return message;
     }
 }

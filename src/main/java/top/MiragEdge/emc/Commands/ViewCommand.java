@@ -24,7 +24,7 @@ public class ViewCommand implements CommandExecutor {
         if (!CommandUtils.checkPermission(sender, PERMISSION, PERM_MESSAGE)) return true;
         Player player = (Player) sender;
 
-        previewMenu.openPreviewMenu(player);
+        previewMenu.open(player);
         return true;
     }
 }

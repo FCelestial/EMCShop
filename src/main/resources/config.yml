@@ -40,7 +40,7 @@ database:
   username: root
   password: ''
 
-  # SQLite数据库文件名
+  # SQLite数据库文件名（相对于database目录）
   file: "emcshop.db"
 
 

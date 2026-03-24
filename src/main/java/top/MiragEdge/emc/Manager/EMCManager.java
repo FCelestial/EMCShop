@@ -341,10 +341,10 @@ public class EMCManager {
                 // 使用Vault经济系统
                 try {
                     EMCShop.getEconomy().depositPlayer(player, amount);
-                    plugin.getLogger().info("向玩家 " + player.getName() + " 存款: " + amount + " 货币");
+                    // 成功时不输出日志，减少控制台噪音
                     return true;
                 } catch (Exception e) {
-                    plugin.getLogger().warning("Vault经济存款失败: " + e.getMessage());
+                    plugin.getLogger().warning("Vault经济存款失败: " + player.getName() + " - " + e.getMessage());
                     return false;
                 }
         }
@@ -369,11 +369,13 @@ public class EMCManager {
                     boolean success = deposit(player, amount);
                     if (success) {
                         return; // 存款成功
-                    } else {
-                        plugin.getLogger().warning("存款操作返回失败，重试中... (" + (retries + 1) + "/3)");
                     }
+                    // 存款返回false时静默重试，不输出日志
                 } catch (Exception e) {
-                    plugin.getLogger().warning("存款操作异常: " + e.getMessage() + "，重试中... (" + (retries + 1) + "/3)");
+                    // 只在最终失败时记录日志
+                    if (retries == 2) {
+                        plugin.getLogger().warning("经济操作失败: " + player.getName() + " - " + e.getMessage());
+                    }
                 }
 
                 retries++;
@@ -386,7 +388,10 @@ public class EMCManager {
                     }
                 }
             }
-            plugin.getLogger().warning("无法完成经济操作: " + player.getName() + " - " + amount);
+            // 只有真正失败3次后才记录最终失败
+            if (retries >= 3) {
+                plugin.getLogger().warning("经济操作最终失败: " + player.getName() + " - " + amount);
+            }
         });
     }
 

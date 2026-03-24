@@ -24,7 +24,7 @@ public class PurchaseCommand implements CommandExecutor {
         if (!CommandUtils.checkPermission(sender, PERMISSION, PERM_MESSAGE)) return true;
         Player player = (Player) sender;
 
-        purchaseMenu.openPurchaseMenu(player);
+        purchaseMenu.open(player);
         return true;
     }
 }

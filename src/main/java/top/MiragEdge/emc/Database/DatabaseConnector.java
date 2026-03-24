@@ -3,6 +3,7 @@ package top.MiragEdge.emc.Database;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import top.MiragEdge.emc.EMCShop;
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -127,7 +128,16 @@ public class DatabaseConnector {
         // 从配置读取SQLite设置
         String databaseFile = plugin.getConfig().getString("database.file", "emcshop.db");
         String dataFolder = plugin.getDataFolder().getAbsolutePath();
-        String fullPath = dataFolder + "/" + databaseFile;
+
+        // 确保database目录存在
+        File databaseDir = new File(dataFolder, "database");
+        if (!databaseDir.exists()) {
+            databaseDir.mkdirs();
+        }
+
+        // 使用 File 构造函数正确处理不同操作系统的路径分隔符
+        File dbFile = new File(databaseDir, databaseFile);
+        String fullPath = dbFile.getAbsolutePath();
 
         // 读取连接池配置（SQLite使用较小的连接池）
         int maxPoolSize = plugin.getConfig().getInt("database.sqlite-pool.max-size", 3);

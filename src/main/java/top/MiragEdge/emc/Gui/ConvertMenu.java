@@ -6,7 +6,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -25,6 +24,9 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import top.MiragEdge.emc.Gui.shared.SharedConstants;
+import top.MiragEdge.emc.Gui.shared.SlotUtils;
+import top.MiragEdge.emc.Gui.shared.SoundManager;
 import top.MiragEdge.emc.Manager.EMCManager;
 import top.MiragEdge.emc.EMCShop;
 import top.MiragEdge.emc.Utils.MessageUtil;
@@ -35,9 +37,13 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
+/**
+ * 转换菜单
+ * 玩家可以在这里将物品转换为EMC货币
+ */
 public class ConvertMenu implements InventoryHolder, Listener {
 
-    // 定义颜色方案
+    // 定义颜色方案（ConvertMenu特有）
     private static final TextColor PRIMARY_COLOR = TextColor.color(255, 170, 0);      // 鲜艳的金色
     private static final TextColor SECONDARY_COLOR = TextColor.color(85, 170, 255);   // 饱和的蓝色
     private static final TextColor SUCCESS_COLOR = TextColor.color(85, 255, 85);      // 明亮的绿色
@@ -55,38 +61,31 @@ public class ConvertMenu implements InventoryHolder, Listener {
     private final Map<UUID, Boolean> conversionStatus = new ConcurrentHashMap<>();
     private final File pendingItemsFile;
 
-    // 界面布局常量
-    private static final int[] BACKGROUND_SLOTS = {45, 46, 47, 48, 50, 51, 52, 53};
-    private static final int CONVERT_SLOT = 49;
-    private static final int[] INPUT_SLOTS = new int[45];
-
     // 性能优化标记
     private volatile boolean saveInProgress = false;
     private volatile long lastSaveTime = 0;
     private static final long SAVE_COOLDOWN = 5000;
 
-    // 修复：使用线程安全的映射来跟踪每个玩家的出售点击状态
+    // 线程安全地跟踪每个玩家的出售点击状态
     private final Map<UUID, Boolean> sellClickMap = new ConcurrentHashMap<>();
-
-    static {
-        for (int i = 0; i < 45; i++) {
-            INPUT_SLOTS[i] = i;
-        }
-    }
 
     public ConvertMenu(JavaPlugin plugin, EMCManager emcManager) {
         this.plugin = plugin;
         this.emcManager = emcManager;
-        this.pendingItemsFile = new File(plugin.getDataFolder(), "pending_items.yml");
 
-        if (!plugin.getDataFolder().exists()) {
-            plugin.getDataFolder().mkdirs();
+        // 将待处理物品文件放在database目录下
+        File databaseDir = new File(plugin.getDataFolder(), "database");
+        if (!databaseDir.exists()) {
+            databaseDir.mkdirs();
         }
+        this.pendingItemsFile = new File(databaseDir, "pending_items.yml");
 
         Bukkit.getPluginManager().registerEvents(this, plugin);
         loadPendingItems();
         startAutoSaveTask();
     }
+
+    // ==================== 持久化方法 ====================
 
     public void saveAllPendingItemsAsync() {
         if (saveInProgress || (System.currentTimeMillis() - lastSaveTime < SAVE_COOLDOWN)) {
@@ -180,7 +179,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
 
     private void savePendingItems(Player player, Inventory inv) {
         List<ItemStack> items = new ArrayList<>();
-        for (int slot : INPUT_SLOTS) {
+        for (int slot : SharedConstants.INPUT_SLOTS) {
             ItemStack item = inv.getItem(slot);
             if (item != null && item.getType() != Material.AIR) {
                 items.add(item.clone());
@@ -196,7 +195,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
     public void restorePendingItems(Player player) {
         UUID playerId = player.getUniqueId();
 
-        // 修复：使用更可靠的转换状态检查
+        // 检查转换状态
         if (conversionStatus.containsKey(playerId) || convertingPlayers.contains(playerId)) {
             return;
         }
@@ -220,16 +219,27 @@ public class ConvertMenu implements InventoryHolder, Listener {
         }
     }
 
+    // ==================== 菜单打开和创建 ====================
+
     public void open(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        // 检查玩家数据是否已加载
+        if (emcManager.getPlayerData(playerId) == null) {
+            player.sendMessage(MessageUtil.getInstance().getMessage("general.data-loading"));
+            emcManager.onPlayerLogin(player);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> open(player), 20L);
+            return;
+        }
+
         restorePendingItems(player);
 
-        // 从配置读取标题
         Component title = MessageUtil.getInstance().getMessage("convert-menu.title");
 
         Inventory inv = Bukkit.createInventory(this, 54, title);
 
         ItemStack background = createBackgroundItem();
-        for (int slot : BACKGROUND_SLOTS) {
+        for (int slot : SharedConstants.BACKGROUND_SLOTS) {
             inv.setItem(slot, background);
         }
 
@@ -237,7 +247,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
 
         player.openInventory(inv);
         openInventories.put(player.getUniqueId(), inv);
-        player.playSound(player.getLocation(), Sound.BLOCK_WOODEN_DOOR_OPEN, 1.0f, 1.0f);
+        SoundManager.playOpen(player);
     }
 
     private ItemStack createBackgroundItem() {
@@ -257,19 +267,16 @@ public class ConvertMenu implements InventoryHolder, Listener {
 
         String currencyName = MessageUtil.getInstance().getCurrencyName();
 
-        // 使用配置中的按钮名称
         meta.displayName(MessageUtil.getInstance().getMessage("convert-menu.convert-button-name"));
 
         double backpackValue = calculateBackpackTotalValue(player);
 
         List<Component> lore = new ArrayList<>();
-        // 菜单价值
         lore.add(Component.text()
                 .append(Component.text("菜单物品价值: ", INFO_COLOR))
                 .append(Component.text(String.format("%,.1f", totalValue) + " " + currencyName, VALUE_COLOR))
                 .build());
 
-        // 背包价值
         lore.add(Component.text()
                 .append(Component.text("背包物品价值: ", INFO_COLOR))
                 .append(Component.text(String.format("%,.1f", backpackValue) + " " + currencyName, SECONDARY_COLOR))
@@ -277,10 +284,8 @@ public class ConvertMenu implements InventoryHolder, Listener {
 
         lore.add(Component.empty());
 
-        // 操作提示
         lore.add(Component.text("关闭界面或点击进行转换", SUCCESS_COLOR));
 
-        // 快捷键提示
         lore.add(Component.text()
                 .append(Component.text("按 ", PRIMARY_COLOR))
                 .append(Component.text("Q", ERROR_COLOR).decorate(TextDecoration.BOLD))
@@ -290,8 +295,10 @@ public class ConvertMenu implements InventoryHolder, Listener {
         meta.lore(lore);
         convertButton.setItemMeta(meta);
 
-        inv.setItem(CONVERT_SLOT, convertButton);
+        inv.setItem(SharedConstants.CONVERT_SLOT, convertButton);
     }
+
+    // ==================== 物品价值计算 ====================
 
     private boolean isBasicItem(ItemStack item) {
         if (item == null || item.getType().isAir()) {
@@ -310,7 +317,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
 
     private double calculateTotalValue(Inventory inv) {
         double total = 0.0;
-        for (int slot : INPUT_SLOTS) {
+        for (int slot : SharedConstants.INPUT_SLOTS) {
             ItemStack item = inv.getItem(slot);
             if (item == null || item.getType() == Material.AIR) continue;
             if (!isBasicItem(item)) continue;
@@ -342,46 +349,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
         return total;
     }
 
-    /**
-     * 带重试机制的存款方法（兼容现有代码）
-     * @param player 玩家对象
-     * @param amount 存款金额
-     */
-    private void depositWithRetry(Player player, double amount) {
-        if (amount <= 0) return;
-        if (player == null) return;
-
-        // 使用异步任务执行存款，避免阻塞主线程
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            int retries = 0;
-            while (retries < 3) {
-                try {
-                    // 直接调用异步安全的存款方法
-                    // deposit方法内部使用ConcurrentHashMap存储玩家数据，是线程安全的
-                    // 数据库保存也是异步的
-                    boolean success = emcManager.deposit(player, amount);
-                    if (success) {
-                        return; // 存款成功
-                    } else {
-                        plugin.getLogger().warning("存款操作返回失败，重试中... (" + (retries + 1) + "/3)");
-                    }
-                } catch (Exception e) {
-                    plugin.getLogger().warning("存款操作异常: " + e.getMessage() + "，重试中... (" + (retries + 1) + "/3)");
-                }
-
-                retries++;
-                if (retries < 3) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException ignored) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                }
-            }
-            plugin.getLogger().warning("无法完成经济操作: " + player.getName() + " - " + amount);
-        });
-    }
+    // ==================== 存款和转换逻辑 ====================
 
     private void sellAllItemsInBackpack(Player player) {
         double totalValue = 0.0;
@@ -414,40 +382,42 @@ public class ConvertMenu implements InventoryHolder, Listener {
         }
 
         if (totalValue > 0) {
-            depositWithRetry(player, totalValue);
+            emcManager.depositWithRetry(player, totalValue);
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("amount", String.format("%,.1f", totalValue));
             placeholders.put("currency", MessageUtil.getInstance().getCurrencyName());
             player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.backpack-sold", placeholders));
-            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
-        } else {
-            player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.no-backpack-items"));
-            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.8f);
-        }
+            SoundManager.playSuccess(player);
 
-        if (!unlockedComponents.isEmpty()) {
-            Component baseMessage = MessageUtil.getInstance().getMessage("convert-menu.unlocked-items");
-            String commaSeparator = MessageUtil.getInstance().getRawMessage("general.comma-separator");
-            String andSeparator = MessageUtil.getInstance().getRawMessage("general.and-separator");
+            // 按Q出售成功时显示解锁物品消息
+            if (!unlockedComponents.isEmpty()) {
+                Component baseMessage = MessageUtil.getInstance().getMessage("convert-menu.unlocked-items");
+                String commaSeparator = MessageUtil.getInstance().getRawMessage("general.comma-separator");
+                String andSeparator = MessageUtil.getInstance().getRawMessage("general.and-separator");
 
-            for (int i = 0; i < unlockedComponents.size(); i++) {
-                if (i > 0) {
-                    baseMessage = baseMessage.append(Component.text(
-                            i < unlockedComponents.size() - 1 ? commaSeparator : andSeparator,
-                            INFO_COLOR));
+                for (int i = 0; i < unlockedComponents.size(); i++) {
+                    if (i > 0) {
+                        baseMessage = baseMessage.append(Component.text(
+                                i < unlockedComponents.size() - 1 ? commaSeparator : andSeparator,
+                                INFO_COLOR));
+                    }
+                    baseMessage = baseMessage.append(
+                            unlockedComponents.get(i)
+                                    .color(PRIMARY_COLOR)
+                                    .decoration(TextDecoration.ITALIC, false)
+                    );
                 }
-                baseMessage = baseMessage.append(
-                        unlockedComponents.get(i)
-                                .color(PRIMARY_COLOR)
-                                .decoration(TextDecoration.ITALIC, false)
-                );
+                player.sendMessage(baseMessage);
             }
-            player.sendMessage(baseMessage);
+        } else {
+            // 没有物品时提示
+            player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.no-backpack-items"));
+            SoundManager.playError(player);
         }
 
-        if (skippedItems) {
-            player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.skipped-items"));
-        }
+        // 移除标记并关闭GUI，防止 onInventoryClose 再次处理
+        sellClickMap.remove(player.getUniqueId());
+        player.closeInventory();
     }
 
     private void performConversion(Player player, Inventory inv, boolean isNormalClose) {
@@ -461,7 +431,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
             pendingItems.remove(playerId);
 
             List<ItemStack> itemsSnapshot = new ArrayList<>();
-            for (int slot : INPUT_SLOTS) {
+            for (int slot : SharedConstants.INPUT_SLOTS) {
                 ItemStack item = inv.getItem(slot);
                 if (item != null && item.getType() != Material.AIR) {
                     itemsSnapshot.add(item.clone());
@@ -506,7 +476,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
             }
 
             if (totalValue > 0) {
-                depositWithRetry(player, totalValue);
+                emcManager.depositWithRetry(player, totalValue);
                 Map<String, String> placeholders = new HashMap<>();
                 placeholders.put("amount", String.format("%,.1f", totalValue));
                 placeholders.put("currency", MessageUtil.getInstance().getCurrencyName());
@@ -550,14 +520,13 @@ public class ConvertMenu implements InventoryHolder, Listener {
                 }
             }
 
-            // 修复：在转换完成后才清空物品槽位
-            for (int slot : INPUT_SLOTS) {
+            // 转换完成后清空物品槽位
+            for (int slot : SharedConstants.INPUT_SLOTS) {
                 inv.setItem(slot, null);
             }
 
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "转换过程中发生错误: " + e.getMessage(), e);
-            // 修复：在异常情况下保存物品，但不清空槽位
             savePendingItems(player, inv);
             player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.error-occurred"));
         } finally {
@@ -567,7 +536,8 @@ public class ConvertMenu implements InventoryHolder, Listener {
         }
     }
 
-    // ===== 事件处理部分 =====
+    // ==================== 事件处理 ====================
+
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
@@ -579,29 +549,32 @@ public class ConvertMenu implements InventoryHolder, Listener {
 
         int slot = event.getRawSlot();
 
-        if (Arrays.stream(BACKGROUND_SLOTS).anyMatch(s -> s == slot)) {
+        // 背景槽位点击
+        if (SlotUtils.isBackgroundSlot(slot)) {
             event.setCancelled(true);
             return;
         }
 
-        if (slot == CONVERT_SLOT) {
+        // 转换按钮
+        if (SlotUtils.isConvertButtonSlot(slot)) {
             if (event.getAction() == InventoryAction.DROP_ONE_SLOT ||
                     event.getAction() == InventoryAction.DROP_ALL_SLOT) {
                 event.setCancelled(true);
+                // 设置标记，防止 onInventoryClose 显示额外消息
+                sellClickMap.put(playerId, true);
                 sellAllItemsInBackpack(player);
                 double totalValue = calculateTotalValue(inv);
                 updateConvertButton(inv, player, totalValue);
-                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
                 return;
             }
 
             event.setCancelled(true);
-            // 修复：使用线程安全的映射来跟踪每个玩家的出售点击状态
             sellClickMap.put(playerId, true);
             player.closeInventory();
             return;
         }
 
+        // 更新转换按钮显示
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             double totalValue = calculateTotalValue(inv);
             updateConvertButton(inv, player, totalValue);
@@ -617,7 +590,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
         if (inv == null || !event.getInventory().equals(inv)) return;
 
         for (int slot : event.getRawSlots()) {
-            if (Arrays.stream(BACKGROUND_SLOTS).anyMatch(s -> s == slot) || slot == CONVERT_SLOT) {
+            if (SlotUtils.isBackgroundSlot(slot) || SlotUtils.isConvertButtonSlot(slot)) {
                 event.setCancelled(true);
                 return;
             }
@@ -639,17 +612,22 @@ public class ConvertMenu implements InventoryHolder, Listener {
         if (inv == null) return;
 
         try {
-            // 修复：使用线程安全的映射来检查出售点击状态
             Boolean sellClick = sellClickMap.remove(playerId);
 
-            if (sellClick != null && sellClick || event.getReason() == Reason.PLAYER) {
+            if (sellClick != null && sellClick) {
+                // 按Q键出售背包：调用 performConversion
                 performConversion(player, inv, true);
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 0.9f);
+                SoundManager.playSuccess(player);
+            } else if (event.getReason() == Reason.PLAYER) {
+                // 点击X按钮直接关闭：保存物品并静默关闭，不发送消息
+                savePendingItems(player, inv);
+                saveAllPendingItemsAsync();
             } else {
+                // 其他关闭原因（如服务器卸载）：保存物品并显示消息
                 savePendingItems(player, inv);
                 saveAllPendingItemsAsync();
                 player.sendMessage(MessageUtil.getInstance().getMessage("convert-menu.menu-saved"));
-                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8f, 0.9f);
+                SoundManager.playError(player);
             }
         } finally {
             openInventories.remove(playerId);
@@ -662,7 +640,6 @@ public class ConvertMenu implements InventoryHolder, Listener {
         UUID playerId = player.getUniqueId();
         Inventory inv = openInventories.get(playerId);
 
-        // 修复：如果玩家正在转换中，不保存物品
         if (inv != null && !convertingPlayers.contains(playerId)) {
             savePendingItems(player, inv);
             saveAllPendingItemsSync();
@@ -671,6 +648,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
     }
 
     @Override
+    @SuppressWarnings("null")
     public Inventory getInventory() {
         return null;
     }
@@ -679,7 +657,6 @@ public class ConvertMenu implements InventoryHolder, Listener {
         for (Map.Entry<UUID, Inventory> entry : openInventories.entrySet()) {
             Player player = Bukkit.getPlayer(entry.getKey());
             if (player != null) {
-                // 修复：如果玩家正在转换中，不保存物品
                 if (!convertingPlayers.contains(player.getUniqueId())) {
                     savePendingItems(player, entry.getValue());
                 }

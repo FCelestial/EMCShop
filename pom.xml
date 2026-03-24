@@ -24,6 +24,7 @@
     </properties>
 
     <build>
+        <finalName>[E][等价交换]EMCShop</finalName>
         <defaultGoal>clean package</defaultGoal>
         <resources>
             <resource>
