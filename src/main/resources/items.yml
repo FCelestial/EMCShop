@@ -31,14 +31,14 @@ EMC_VALUES:
     BLACKSTONE: 2 # 黑石 - 下界建筑方块
     DEEPSLATE: 1 # 深板岩 - 现代建筑方块
     COBBLED_DEEPSLATE: 1 # 深板圆石 - 深板岩变种
-    #TUFF: 1 # 凝灰岩建筑方块
-    #CALCITE: 2 # 方解石建筑方块
+    TUFF: 1 # 凝灰岩建筑方块
+    CALCITE: 2 # 方解石
     GRANITE: 1 # 花岗岩 - 基础石质变种
     DIORITE: 1 # 闪长岩 - 基础石质变种
     ANDESITE: 1 # 安山岩 - 基础石质变种
     #DRIPSTONE_BLOCK: 2 # 滴水石块装饰方块
     #NETHERRACK: 1 # 下界岩 - 生电可量产
-    #BASALT: 2 # 玄武岩建筑方块
+    BASALT: 2 # 玄武岩建筑方块
     #SMOOTH_BASALT: 2 # 平滑玄武岩建筑方块
     END_STONE: 4 # 末地石 - 末地建筑方块
     #PRISMARINE: 4 # 海晶石 - 水下建筑方块
@@ -78,12 +78,12 @@ EMC_VALUES:
 
     #CHISELED_POLISHED_BLACKSTONE: 2 # 錾制磨制黑石变种
     #GILDED_BLACKSTONE: 16 # 镶金黑石 - 稀有装饰方块
-    QUARTZ_BLOCK: 32 # 石英块 - 现代建筑重要材料
+    QUARTZ_BLOCK: 3 # 石英块 - 现代建筑重要材料
     #CHISELED_QUARTZ_BLOCK: 32 # 錾制石英块变种
     #QUARTZ_BRICKS: 32 # 石英砖变种
     #QUARTZ_PILLAR: 32 # 石英柱变种
     #SMOOTH_QUARTZ: 32 # 平滑石英块变种
-    PURPUR_BLOCK: 16 # 紫珀块 - 末地建筑方块
+    PURPUR_BLOCK: 4 # 紫珀块 - 末地建筑方块
     #PURPUR_PILLAR: 16 # 紫珀柱变种
     #END_STONE_BRICKS: 4 # 末地石砖变种
 
@@ -182,13 +182,13 @@ EMC_VALUES:
     #KELP: 1 # 海带 - 生电可量产
     #BAMBOO: 1 # 竹子 - 生电可量产
     #VINE: 2 # 藤蔓 - 生电可量产
-    #GLOW_LICHEN: 4 # 发光地衣 - 生电可量产
+    GLOW_LICHEN: 4 # 发光地衣 - 生电可量产
     #MOSS_CARPET: 1 # 苔藓地毯 - 生电可量产
     #HANGING_ROOTS: 1 # 垂根 - 生电可量产
     #BIG_DRIPLEAF: 4 # 大型垂滴叶 - 生电可量产
     #SMALL_DRIPLEAF: 2 # 小型垂滴叶 - 生电可量产
     #SCULK: 8 # 幽匿方块 - 生电可量产
-    LILY_PAD: 8 # 睡莲 - 装饰性植物
+    LILY_PAD: 16 # 睡莲 - 装饰性植物
     #SEA_PICKLE: 1 # 海泡菜 - 生电可量产
 
     # 去除所有珊瑚类方块且生电可量产
@@ -334,8 +334,8 @@ EMC_VALUES:
     # ===== 基础建筑装饰 =====
     #LADDER: 3 # 梯子 - 基础功能方块
     #SCAFFOLDING: 1 # 脚手架 - 功能性方块
-    CHAIN: 12 # 锁链 - 装饰性方块
-    IRON_BARS: 12 # 铁栏杆
+    CHAIN: 8 # 锁链 - 装饰性方块
+    IRON_BARS: 8 # 铁栏杆
     #ARMOR_STAND: 16 # 盔甲架 - 功能性方块
     #BELL: 128 # 钟 - 稀有装饰方块
     #BARREL: 8 # 木桶 - 存储方块
@@ -498,5 +498,5 @@ EMC_VALUES:
     #POLISHED_BLACKSTONE_WALL: 4 # 磨制黑石墙
 
     # 其他特殊物品，玩家要求的）
-    flower_pot: 1.8 #花盆
-    candle: 5.8 #蜡烛
+    FLOWER_POT: 1.8 #花盆
+    CANDLE: 5.8 #蜡烛

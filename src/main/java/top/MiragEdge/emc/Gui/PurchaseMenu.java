@@ -111,7 +111,9 @@ public class PurchaseMenu implements Listener, InventoryHolder {
         }
 
         int totalPages = (int) Math.ceil((double) unlockedItems.size() / PAGE_SIZE);
-        page = Math.max(0, Math.min(page, totalPages - 1));
+        // 安全处理：当没有物品时，totalPages为0，需要确保页码有效
+        int maxPage = Math.max(0, totalPages - 1);
+        page = Math.max(0, Math.min(page, maxPage));
         playerPages.put(playerId, page);
 
         // 从配置创建标题

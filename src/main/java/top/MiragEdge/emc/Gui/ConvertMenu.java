@@ -51,7 +51,7 @@ public class ConvertMenu implements InventoryHolder, Listener {
     private final EMCManager emcManager;
     private final Map<UUID, Inventory> openInventories = new ConcurrentHashMap<>();
     private final Map<UUID, List<ItemStack>> pendingItems = new ConcurrentHashMap<>();
-    private final Set<UUID> convertingPlayers = new HashSet<>();
+    private final Set<UUID> convertingPlayers = Collections.synchronizedSet(new HashSet<>(16));
     private final Map<UUID, Boolean> conversionStatus = new ConcurrentHashMap<>();
     private final File pendingItemsFile;
 
@@ -351,12 +351,14 @@ public class ConvertMenu implements InventoryHolder, Listener {
         if (amount <= 0) return;
         if (player == null) return;
 
-        // 确保在主线程执行经济操作
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        // 使用异步任务执行存款，避免阻塞主线程
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             int retries = 0;
             while (retries < 3) {
                 try {
-                    // 使用EMCManager的统一存款方法
+                    // 直接调用异步安全的存款方法
+                    // deposit方法内部使用ConcurrentHashMap存储玩家数据，是线程安全的
+                    // 数据库保存也是异步的
                     boolean success = emcManager.deposit(player, amount);
                     if (success) {
                         return; // 存款成功
@@ -368,11 +370,13 @@ public class ConvertMenu implements InventoryHolder, Listener {
                 }
 
                 retries++;
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException ignored) {
-                    Thread.currentThread().interrupt();
-                    break;
+                if (retries < 3) {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
             }
             plugin.getLogger().warning("无法完成经济操作: " + player.getName() + " - " + amount);

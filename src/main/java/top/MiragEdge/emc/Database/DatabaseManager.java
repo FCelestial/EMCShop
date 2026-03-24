@@ -393,7 +393,31 @@ public class DatabaseManager {
         }
 
         if (!taskQueue.offer(task)) {
-            logger.warning("数据库队列已满，任务被丢弃: " + task);
+            // 队列满时，根据任务类型处理
+            if (task.taskType == TaskType.SAVE_DATA && task.playerData != null) {
+                // 保存任务：尝试同步保存以避免数据丢失
+                logger.warning("数据库队列已满，执行同步保存: " + task.playerData.getPlayerId());
+                try {
+                    savePlayerDataSyncInternal(task.playerData);
+                } catch (Exception e) {
+                    logger.severe("同步保存失败: " + e.getMessage());
+                }
+            } else {
+                // 其他任务：记录警告但仍然丢弃
+                logger.warning("数据库队列已满，任务被丢弃: " + task);
+            }
+        }
+    }
+
+    /**
+     * 内部同步保存方法（不经过队列）
+     */
+    private void savePlayerDataSyncInternal(PlayerData playerData) {
+        if (playerData == null) return;
+        try (Connection conn = connector.getConnection()) {
+            savePlayerDataOptimized(conn, playerData);
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "同步保存玩家数据失败: " + playerData.getPlayerId(), e);
         }
     }
 

@@ -19,6 +19,8 @@ public class EMCManager {
     private final DatabaseManager dbManager;
     private final Map<String, Double> emcValues = new LinkedHashMap<>();
     private final Map<UUID, PlayerData> playerDataMap = new ConcurrentHashMap<>();
+    // 缓存不可修改的EMC值映射，避免每次调用都创建新包装
+    private volatile Map<String, Double> cachedEmcValuesView;
 
     // 经济模式枚举
     public enum EconomyMode {
@@ -67,6 +69,9 @@ public class EMCManager {
     // 加载物品EMC值（添加异常处理）
     public void loadEMCValues() {
         emcValues.clear();
+        // 清除缓存，下次调用getEmcValues时会重新创建
+        cachedEmcValuesView = null;
+
         File file = new File(plugin.getDataFolder(), "items.yml");
 
         try {
@@ -90,9 +95,14 @@ public class EMCManager {
         }
     }
 
-    // 获取EMC值映射的方法
+    // 获取EMC值映射的方法（使用缓存的不可修改视图）
     public Map<String, Double> getEmcValues() {
-        return Collections.unmodifiableMap(emcValues);
+        Map<String, Double> cached = cachedEmcValuesView;
+        if (cached == null) {
+            cached = Collections.unmodifiableMap(emcValues);
+            cachedEmcValuesView = cached;
+        }
+        return cached;
     }
 
     // 获取物品EMC值（添加空值检查）
@@ -122,14 +132,15 @@ public class EMCManager {
     public void cleanInvalidUnlocks(UUID playerId) {
         PlayerData playerData = playerDataMap.get(playerId);
         if (playerData != null) {
-            // 获取当前有效物品ID
-            Set<String> validItems = emcValues.keySet();
+            // 创建有效物品ID的快照，避免在检查过程中emcValues发生变化
+            // 使用HashSet存储以便O(1)查找
+            Set<String> validItemsSnapshot = new HashSet<>(emcValues.keySet());
 
             // 创建副本避免并发修改
             Set<String> unlockedItems = new HashSet<>(playerData.getUnlockedItems());
 
             // 移除无效物品
-            unlockedItems.removeIf(itemId -> !validItems.contains(itemId));
+            unlockedItems.removeIf(itemId -> !validItemsSnapshot.contains(itemId));
 
             // 更新解锁列表
             playerData.setUnlockedItems(unlockedItems);
@@ -158,10 +169,14 @@ public class EMCManager {
                 // 登录时清理无效解锁记录
                 cleanInvalidUnlocks(playerId);
 
-                // 初始化EMC余额（如果使用EMC模式且玩家数据中没有余额记录）
-                if (currentEconomyMode == EconomyMode.EMC && playerData.getEmcBalance() < 0) {
-                    playerData.setEmcBalance(0.0);
-                    plugin.getLogger().info("初始化玩家 " + player.getName() + " 的EMC余额: 0.0");
+                // 初始化EMC余额（如果使用EMC模式且玩家余额为0或负数，说明是新玩家或数据异常）
+                if (currentEconomyMode == EconomyMode.EMC && playerData.getEmcBalance() <= 0) {
+                    // 只有当余额正好是0时才认为是初始化（数据库中没有余额记录时为0）
+                    // 如果之前余额是负数也会被重置为0
+                    if (playerData.getEmcBalance() < 0) {
+                        playerData.setEmcBalance(0.0);
+                        plugin.getLogger().info("玩家 " + player.getName() + " 的EMC余额异常，已重置为: 0.0");
+                    }
                 }
             }
         });
@@ -343,12 +358,16 @@ public class EMCManager {
     public void depositWithRetry(Player player, double amount) {
         if (amount <= 0) return;
 
-        // 确保在主线程执行经济操作
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        // 使用异步任务执行存款，避免阻塞主线程
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             int retries = 0;
             while (retries < 3) {
                 try {
-                    if (deposit(player, amount)) {
+                    // 直接调用异步安全的存款方法
+                    // deposit方法内部使用ConcurrentHashMap存储玩家数据，是线程安全的
+                    // 数据库保存也是异步的
+                    boolean success = deposit(player, amount);
+                    if (success) {
                         return; // 存款成功
                     } else {
                         plugin.getLogger().warning("存款操作返回失败，重试中... (" + (retries + 1) + "/3)");
@@ -358,11 +377,13 @@ public class EMCManager {
                 }
 
                 retries++;
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException ignored) {
-                    Thread.currentThread().interrupt();
-                    break;
+                if (retries < 3) {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
             }
             plugin.getLogger().warning("无法完成经济操作: " + player.getName() + " - " + amount);

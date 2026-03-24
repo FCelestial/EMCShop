@@ -12,7 +12,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import top.MiragEdge.emc.Commands.MainCommand;
 import top.MiragEdge.emc.Database.DatabaseConnector;
 import top.MiragEdge.emc.Database.DatabaseManager;
-import top.MiragEdge.emc.Gui.ConvertMenu;
 import top.MiragEdge.emc.Manager.EMCManager;
 import top.MiragEdge.emc.Utils.MessageUtil;
 
@@ -28,7 +27,6 @@ public class EMCShop extends JavaPlugin implements Listener {
     private DatabaseManager dbManager;
     private EMCManager emcManager;
     private static Economy economy;
-    private ConvertMenu convertMenu;
 
     @Override
     public void onEnable() {
@@ -54,7 +52,8 @@ public class EMCShop extends JavaPlugin implements Listener {
         // 根据经济模式决定是否初始化Vault
         EMCManager.EconomyMode economyMode = emcManager.getCurrentEconomyMode();
         if (economyMode == EMCManager.EconomyMode.VAULT) {
-            // 只在VAULT模式下初始化Vault经济
+            // 只在VAU
+            // LT模式下初始化Vault经济
             if (!setupEconomy()) {
                 getLogger().severe("没有发现 Vault 经济插件前置! 关闭插件...");
                 getServer().getPluginManager().disablePlugin(this);
@@ -94,13 +93,6 @@ public class EMCShop extends JavaPlugin implements Listener {
             getLogger().warning("dbManager 为 null，无法保存玩家数据");
         }
 
-        // 安全调用转换菜单的禁用方法
-        if (convertMenu != null) {
-            getLogger().info("正在保存待处理物品数据...");
-            convertMenu.onPluginDisable();
-            getLogger().info("待处理物品数据已保存");
-        }
-
         // 关闭数据库资源
         if (dbManager != null) {
             dbManager.shutdown();
@@ -137,11 +129,6 @@ public class EMCShop extends JavaPlugin implements Listener {
         // 加载玩家数据
         if (emcManager != null) {
             emcManager.onPlayerLogin(player);
-        }
-
-        // 恢复任何待处理的转换物品
-        if (convertMenu != null) {
-            convertMenu.restorePendingItems(player);
         }
     }
 

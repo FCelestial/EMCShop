@@ -23,10 +23,10 @@ public class PlayerData {
     }
 
     /**
-     * 获取解锁物品集合（返回不可修改的副本）
+     * 获取解锁物品集合（返回不可修改的视图）
      */
     public Set<String> getUnlockedItems() {
-        return Collections.unmodifiableSet(new HashSet<>(unlockedItems));
+        return Collections.unmodifiableSet(unlockedItems);
     }
 
     public void unlockItem(String itemId) {
@@ -39,7 +39,8 @@ public class PlayerData {
 
     /**
      * 批量设置解锁物品
-     * @param unlockedItems 新的解锁物品集合
+     * 注意：调用者应该传入一个防御性副本，因为本方法会清空并重新填充集合
+     * @param unlockedItems 新的解锁物品集合（应该是防御性副本）
      */
     public void setUnlockedItems(Set<String> unlockedItems) {
         this.unlockedItems.clear();

@@ -103,8 +103,9 @@ public class PreviewMenu implements Listener, InventoryHolder {
         List<String> allItems = new ArrayList<>(emcManager.getEmcValues().keySet());
         int totalPages = (int) Math.ceil((double) allItems.size() / PAGE_SIZE);
 
-        // 确保页码在有效范围内
-        page = Math.max(0, Math.min(page, totalPages - 1));
+        // 确保页码在有效范围内（安全处理空列表情况）
+        int maxPage = Math.max(0, totalPages - 1);
+        page = Math.max(0, Math.min(page, maxPage));
         playerPages.put(playerId, page);
 
         // 从配置创建标题

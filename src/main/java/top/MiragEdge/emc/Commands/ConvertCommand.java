@@ -11,7 +11,7 @@ import top.MiragEdge.emc.EMCShop;
 public class ConvertCommand implements CommandExecutor {
 
     private static final String PERMISSION = "emcshop.user.convert";
-    private static final String PERM_MESSAGE = "§6需要达到3级才可以使用这个功能，可通过签到与每日任务获得经验!";
+    private static final String PERM_MESSAGE = "§6你无法使用!是因为没有权限唉";
 
     private final ConvertMenu convertMenu;
 
