@@ -7,6 +7,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -261,6 +262,11 @@ public abstract class BaseMenu implements Listener, InventoryHolder {
             return;
         }
 
+        // 确保只处理当前菜单的点击（通过比较实例）
+        if (menu != this) {
+            return;
+        }
+
         event.setCancelled(true);
         int slot = event.getRawSlot();
         UUID playerId = player.getUniqueId();
@@ -309,6 +315,15 @@ public abstract class BaseMenu implements Listener, InventoryHolder {
 
         // 处理内容区域点击
         if (SlotUtils.isContentSlot(slot)) {
+            // 处理 Q 键点击（掉落一个/一组）- 购买一组
+            InventoryAction action = event.getAction();
+            if (action == InventoryAction.DROP_ONE_SLOT || action == InventoryAction.DROP_ALL_SLOT) {
+                // Q 键或 Ctrl+Q 键 - 购买一组
+                handleContentAreaClick(player, slot, false, true);
+                return;
+            }
+
+            // 普通左键或Shift+左键点击
             handleContentAreaClick(player, slot, event.getClick().isLeftClick(),
                     event.getClick().isShiftClick());
         }

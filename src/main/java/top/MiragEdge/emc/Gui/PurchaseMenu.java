@@ -117,10 +117,12 @@ public class PurchaseMenu extends BaseMenu {
                 .decoration(TextDecoration.ITALIC, false));
 
         int unlockedCount = getMenuItems(player).size();
+        // 获取EMC物品总数（不是玩家已解锁的数量）
+        int emcItemsCount = emcManager.getEmcValues().size();
 
         List<Component> lore = new ArrayList<>();
         lore.add(Component.text("已解锁: ", SharedConstants.NEUTRAL_COLOR)
-                .append(Component.text(unlockedCount + "/" + totalItems, SharedConstants.SECONDARY_COLOR)));
+                .append(Component.text(unlockedCount + "/" + emcItemsCount, SharedConstants.SECONDARY_COLOR)));
 
         double balance = emcManager.getBalance(player);
         lore.add(Component.text("余额: ", SharedConstants.NEUTRAL_COLOR)
@@ -169,7 +171,7 @@ public class PurchaseMenu extends BaseMenu {
                     .build());
 
             lore.add(Component.text()
-                    .append(Component.text("Shift+左键", SharedConstants.SECONDARY_COLOR))
+                    .append(Component.text("Q键", SharedConstants.SECONDARY_COLOR))
                     .append(Component.text("购买一组", SharedConstants.INFO_COLOR))
                     .build());
 

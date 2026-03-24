@@ -105,6 +105,14 @@ public class MainCommand implements CommandExecutor, TabExecutor {
         if (args.length == 1) {
             return new ArrayList<>(subCommands.keySet());
         }
+
+        // 委托给子命令处理 Tab 补全
+        CommandExecutor subCommand = subCommands.get(args[0].toLowerCase());
+        if (subCommand instanceof TabExecutor tabExecutor) {
+            String[] newArgs = args.length > 1 ? Arrays.copyOfRange(args, 1, args.length) : new String[0];
+            return tabExecutor.onTabComplete(sender, cmd, alias, newArgs);
+        }
+
         return Collections.emptyList();
     }
 

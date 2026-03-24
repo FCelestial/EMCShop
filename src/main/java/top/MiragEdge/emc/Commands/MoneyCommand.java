@@ -305,23 +305,23 @@ public class MoneyCommand implements CommandExecutor, TabExecutor {
     private void modifyBalance(CommandSender sender, UUID playerId, String displayName, double amount, Operation op) {
         double currentBalance = getBalanceDirect(playerId);
         double newBalance;
-        String actionText;
 
         if (op == Operation.ADD) {
             newBalance = currentBalance + amount;
-            actionText = "发放";
         } else {
             newBalance = currentBalance - amount;
-            actionText = "扣除";
             if (newBalance < 0) {
                 sender.sendMessage(Component.text("玩家 " + displayName + " 的余额不足以扣除 " +
                         String.format("%,.1f", amount) + " EMC", ERROR_COLOR));
+                // 也通知玩家余额不足
+                notifyPlayer(playerId, "money.insufficient-balance", amount);
                 return;
             }
         }
 
         // 直接更新数据库
         if (setBalanceDirect(playerId, newBalance)) {
+            String actionText = op == Operation.ADD ? "发放" : "扣除";
             Component message = Component.text()
                     .append(Component.text("【EMC货币管理】\n", PRIMARY_COLOR))
                     .append(Component.text(actionText + "成功\n", SUCCESS_COLOR))
@@ -336,8 +336,15 @@ public class MoneyCommand implements CommandExecutor, TabExecutor {
                     .build();
             sender.sendMessage(message);
             plugin.getLogger().info("管理员 " + sender.getName() + " " + actionText + "玩家 " + displayName + " 的 EMC: " + amount);
+
+            // 通知玩家余额变动
+            if (op == Operation.ADD) {
+                notifyPlayer(playerId, "money.received", amount);
+            } else {
+                notifyPlayer(playerId, "money.deducted", amount);
+            }
         } else {
-            sender.sendMessage(Component.text(actionText + "失败，请查看服务器日志", ERROR_COLOR));
+            sender.sendMessage(Component.text("操作失败，请查看服务器日志", ERROR_COLOR));
         }
     }
 
@@ -354,6 +361,9 @@ public class MoneyCommand implements CommandExecutor, TabExecutor {
                     .build();
             sender.sendMessage(message);
             plugin.getLogger().info("管理员 " + sender.getName() + " 设置玩家 " + displayName + " 的 EMC 余额为: " + amount);
+
+            // 通知玩家余额已设置
+            notifyPlayer(playerId, "money.balance-set", amount);
         } else {
             sender.sendMessage(Component.text("设置失败，请查看服务器日志", ERROR_COLOR));
         }
@@ -400,9 +410,8 @@ public class MoneyCommand implements CommandExecutor, TabExecutor {
      * 同步加载玩家数据（用于离线玩家）
      */
     private PlayerData loadPlayerDataSync(UUID playerId) {
-        try {
-            java.sql.Connection conn = plugin.getEmcManager().getDbManager()
-                    .getConnector().getConnection();
+        try (java.sql.Connection conn = plugin.getEmcManager().getDbManager()
+                .getConnector().getConnection()) {
 
             PlayerData playerData = new PlayerData(playerId);
 
@@ -438,24 +447,53 @@ public class MoneyCommand implements CommandExecutor, TabExecutor {
 
     /**
      * 通过玩家名获取UUID（支持离线玩家）
+     * 验证玩家是否真实存在过
      */
     private UUID getPlayerUUID(String playerName) {
+        // 先检查在线玩家
         Player player = Bukkit.getPlayer(playerName);
         if (player != null) {
             return player.getUniqueId();
         }
 
-        // 离线玩家，尝试从数据库获取
-        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerName);
-        if (offlinePlayer != null && offlinePlayer.getUniqueId() != null) {
-            return offlinePlayer.getUniqueId();
-        }
-
-        // 尝试直接解析玩家名作为UUID（用于某些特殊情况）
+        // 尝试直接解析玩家名作为UUID
         try {
             return UUID.fromString(playerName);
         } catch (IllegalArgumentException ignored) {
-            return null;
+            // 不是有效的 UUID，继续检查
+        }
+
+        // 获取离线玩家
+        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerName);
+        if (offlinePlayer != null && offlinePlayer.getUniqueId() != null) {
+            // 验证这个玩家是否真实存在过（检查数据库中是否有记录）
+            if (hasPlayerData(offlinePlayer.getUniqueId())) {
+                return offlinePlayer.getUniqueId();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 检查玩家是否在数据库中存在
+     */
+    private boolean hasPlayerData(UUID playerId) {
+        try (java.sql.Connection conn = plugin.getEmcManager().getDbManager()
+                .getConnector().getConnection()) {
+
+            String sql = "SELECT 1 FROM player_emc_balance WHERE player_uuid = ? LIMIT 1";
+            try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, playerId.toString());
+                try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                    return rs.next();
+                }
+            }
+        } catch (java.sql.SQLException e) {
+            plugin.getLogger().log(java.util.logging.Level.WARNING,
+                    "检查玩家数据失败: " + playerId, e);
+            // 数据库查询失败时，允许操作继续（可能是新玩家）
+            return true;
         }
     }
 
@@ -482,6 +520,19 @@ public class MoneyCommand implements CommandExecutor, TabExecutor {
             return true;
         } catch (NumberFormatException e) {
             return false;
+        }
+    }
+
+    /**
+     * 向玩家发送通知消息
+     */
+    private void notifyPlayer(UUID playerId, String messageKey, double amount) {
+        Player player = Bukkit.getPlayer(playerId);
+        if (player != null && player.isOnline()) {
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("amount", String.format("%,.1f", amount));
+            placeholders.put("currency", MessageUtil.getInstance().getCurrencyName());
+            player.sendMessage(MessageUtil.getInstance().getMessage(messageKey, placeholders));
         }
     }
 

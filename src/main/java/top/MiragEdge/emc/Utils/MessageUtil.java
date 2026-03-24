@@ -71,10 +71,17 @@ public class MessageUtil {
         defaultMessages.put("purchase-menu.purchase-success", "<color:#9EE6A0>成功购买 </color><color:#39C5BB>%item%</color><color:#FFB347> × %amount%</color><color:#9EE6A0> 花费 </color><color:#FFB347>%price% 灵叶</color>\\n<color:#D3D3D3>(基础价值: %base_value% + 重构损耗: %loss%)</color>");
 
         // 通用消息
-        defaultMessages.put("currency.name", "硬币");
+        defaultMessages.put("currency.name", "EMC");
         defaultMessages.put("general.data-loading", "<color:#FFD166>正在加载您的数据，请稍候...</color>");
         defaultMessages.put("general.comma-separator", ", ");
         defaultMessages.put("general.and-separator", " 和 ");
+        defaultMessages.put("general.no-permission", "<color:#FF6B6B>您没有权限执行此操作</color>");
+
+        // EMC货币管理消息
+        defaultMessages.put("money.received", "<color:#55FF55>您收到了 </color><color:#FFFF55><bold>%amount%</bold></color><color:#55FF55> %currency%</color>");
+        defaultMessages.put("money.deducted", "<color:#FF6B6B>已从您的账户扣除 </color><color:#FFFF55><bold>%amount%</bold></color><color:#FF6B6B> %currency%</color>");
+        defaultMessages.put("money.balance-set", "<color:#55FF55>您的%currency%余额已设置为 </color><color:#FFFF55><bold>%amount%</bold></color>");
+        defaultMessages.put("money.insufficient-balance", "<color:#FF6B6B>您的余额不足，无法扣除 </color><color:#FFFF55>%amount%</color><color:#FF6B6B> %currency%</color>");
     }
 
     private void loadMessageConfig() {

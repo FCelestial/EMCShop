@@ -43,8 +43,15 @@ purchase-menu:
 
 # 通用消息
 currency:
-  name: "EMC"
+  name: "cc币"
 general:
   data-loading: "<color:#FFD166>正在加载您的数据，请稍候...</color>"
   comma-separator: ", "
   and-separator: " 和 "
+
+# EMC货币管理消息
+money:
+  received: "<color:#55FF55>您收到了 </color><color:#FFFF55><bold>%amount%</bold></color><color:#55FF55> %currency%</color>"
+  deducted: "<color:#FF6B6B>已从您的账户扣除 </color><color:#FFFF55><bold>%amount%</bold></color><color:#FF6B6B> %currency%</color>"
+  balance-set: "<color:#55FF55>您的cc币余额已设置为 </color><color:#FFFF55><bold>%amount%</bold></color><color:#55FF55> %currency%</color>"
+  insufficient-balance: "<color:#FF6B6B>您的余额不足，无法扣除 </color><color:#FFFF55>%amount%</color><color:#FF6B6B> %currency%</color>"
